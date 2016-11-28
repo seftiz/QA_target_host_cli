@@ -1,6 +1,9 @@
+export SDK_DIR := /mnt/share/sdk-4.11.1-alpha4-sc-i686-linux-gnu
 
 #export SDK_DIR := /docs/ATE/fw_releases/sdk-4.3.0-beta7-mc-i686-linux-gnu
-#export COMMON := ../common
+
+
+export COMMON := ../common
 
 
 include $(SDK_DIR)/build/rules.mk

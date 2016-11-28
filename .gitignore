@@ -1,0 +1,61 @@
+
+# Compiled Python
+*.pyc
+
+# Object files
+*.o
+*.gdb
+*.d
+*.img
+re:^ate - Copy\.pyproj$
+re:^atlk_st - Copy\.sln$
+re:^atlk_st\.v12\.suo$
+re:^uuts\craton\\.managment\.py\.swp$
+re:^uuts\craton\embedded\Makefile - Copy$
+re:^uuts\craton\managment\.py\.orig$
+re:^uuts\panagea4\embedded\src_doc$
+re:^uuts\craton\\.managment\.py\.swp$
+re:^uuts\craton\embedded\Makefile - Copy$
+re:^uuts\craton\managment\.py\.orig$
+re:^uuts\panagea4\embedded\src_doc$
+embedded\sdk\gm-1.3\linux\v2x-cli
+re:^embedded\sdk\sdk-3\.2\linux\bin\fs01docs$
+embedded/sdk/sdk-3.2/threadx/bin/
+embedded/sdk/sdk-3.x/threadx/bin/
+embedded/sdk/sdk-4.x/threadx/arm/
+Backup/
+embedded\sdk\sdk-4.x\emb\~AutoRecover.emb.vcxproj
+Tests.v12.suo
+UpgradeLog2.htm
+embedded\Marben\.depend\Make.depend
+embedded\Marben\appliPangaea
+embedded\Marben\appliPangaea.map
+embedded\Marben\appliPangaeaIMG
+embedded\Marben\appliPangaeaRAW
+embedded\Marben\archive\denmUserInterface.cpp
+embedded\Marben\archive\denmUserInterface.hpp
+embedded\Marben\archive\ldmUserInterface.cpp
+embedded\Marben\archive\ldmUserInterface.hpp
+embedded\sdk\sdk-4.x\MakefileMC
+qa.IAB
+qa.IAD
+qa.IMB
+qa.IMD
+qa.PFI
+qa.PO
+qa.PR
+qa.PRI
+qa.PS
+qa.WK3
+sw_system.v12.suo
+embedded\sdk\sdk-4.x\arm\obj\v2x-cli.arc2.o.sym
+embedded/sdk/sdk-4.3/
+embedded/sdk/sdk-4.2/threadx/arm/bin/v2x-cli
+*.mod
+*.orig
+embedded/tg/etsi/output/*
+*.log
+embedded/tg/arm/*
+sw_system.opensdf
+sw_system.sdf
+
