@@ -1,6 +1,6 @@
-export SDK_DIR := /media/sf_ATE_proj/sdk-4.11.1-alpha4-sc-i686-linux-gnu/
 
-#export SDK_DIR := /docs/ATE/fw_releases/sdk-4.11.0-beta1-mc-i686-linux-gnu
+export SDK_DIR :=   /mnt/share/sdk-4.11.1-alpha4-sc-i686-linux-gnu
+# export SDK_DIR := /docs/ATE/fw_releases/sdk-4.11.0-beta1-mc-i686-linux-gnu
 export COMMON := ../common
 export APPS := ../apps
 
@@ -18,7 +18,7 @@ all: threadx linux
 	@echo "Building all"
 	$(MAKE) -C threadx/
 	$(MAKE) -C linux/
-
+	
 linux:
 	$(MAKE) -C linux/
 
