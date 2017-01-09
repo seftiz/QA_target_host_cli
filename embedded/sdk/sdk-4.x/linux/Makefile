@@ -33,7 +33,8 @@ $(HOST)/bin/v2x-cli: \
 	$(HOST)/obj/$(COMMON)/general/general.o \
 	$(HOST)/obj/$(COMMON)/link/link.o \
 	$(HOST)/obj/../threadx/ecc/ecc.o \
-	$(HOST)/obj/remote/remote.o
+	$(HOST)/obj/remote/remote.o \
+        $(HOST)/obj/$(COMMON)/management/mng_api.o \
 
 clean: 
 	rm -rf $(HOST)

@@ -29,8 +29,6 @@
 
 #include "list.h"
 #include "v2x_cli.h"
-
-
 //#include "../../common/session/session.h"
 #ifdef __THREADX__	
 #include "../../common/nav_api/nav_api.h"
@@ -66,8 +64,6 @@ void *connection_handler( void *thread_desc );
 
 void cli_cleanup( struct cli_def *cli );
 
-	#include "../../common/management/mng_api.h"
-        #include <atlk/mibs/wlan-mib.h>
 
 #ifdef __THREADX__
 static TX_THREAD    cli_main_thread;
@@ -186,13 +182,9 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, c, "reset_cntrs", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
   cli_register_command(*cli, c, "print_cntrs", cli_v2x_link_print_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "print Internal link counters");
 
-  /*mib api commands*/
+  /*mib commands*/
   	d = cli_register_command(*cli, NULL, "mng", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Management mibs");
-        cli_register_command(*cli, d, "create", cli_v2x_managment_service_create, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Create managment service");
-	cli_register_command(*cli, d, "delete", cli_v2x_managment_service_delete, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Delete managment service");
-	c = cli_register_command(*cli, d, "mibApi",NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Test managment mibs");
-        cli_register_command(*cli, c, "testGet",cli_v2x_mibApi_testGet, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Test managment mibs Set functions");
-        cli_register_command(*cli, c, "testSet",cli_v2x_mibApi_testSet, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Test managment mibs Get functions");
+  cli_register_command(*cli, d, "create", cli_v2x_managment_service_create, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Create managment service");
 
   c = cli_register_command(*cli, d, "set", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set management mibs");
   cli_register_command(*cli, c, "wlanDefaultTxDataRate", cli_v2x_set_wlanDefaultTxDataRate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set default transmission data rate.");
@@ -215,8 +207,6 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, c, "init", cli_v2x_nav_init, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "init nav api");
   cli_register_command(*cli, c, "start", cli_v2x_nav_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start nav api handler");
   cli_register_command(*cli, c, "stop", cli_v2x_nav_stop, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start nav api handler");
-	
-
 
   /* can */
 	d = cli_register_command(*cli, NULL, "can", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "can bus implementation");
