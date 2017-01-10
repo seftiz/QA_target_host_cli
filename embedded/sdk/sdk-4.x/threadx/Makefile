@@ -1,4 +1,4 @@
-export SDK_DIR := /media/sf_ATE_proj/sdk-4.11.1-alpha4-sc-i686-linux-gnu
+export SDK_DIR := /media/sf_fw_release/sdk-4.11.1-alpha4-sc-i686-linux-gnu
 
 #export SDK_DIR := /docs/ATE/fw_releases/sdk-4.3.0-beta7-mc-i686-linux-gnu
 

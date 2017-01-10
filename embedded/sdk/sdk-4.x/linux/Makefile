@@ -7,12 +7,12 @@
 # COMMON := ../common
 
 ifeq ($(SDK_DIR),)
-SDK_DIR :=  /media/sf_ATE_proj/sdk-4.11.1-alpha4-sectonm-i686-linux-gnu/
+SDK_DIR :=  /media/sf_fw_release/sdk-4.11.1-alpha4-sectonm-i686-linux-gnu/
 COMMON := ../common
 endif
 
 # SDK_DIR := ../../..
-export SDK_DIR := /media/sf_ATE_proj/sdk-4.11.1-alpha4-sectonm-i686-linux-gnu/
+export SDK_DIR := /media/sf_fw_release/sdk-4.11.1-alpha4-sectonm-i686-linux-gnu/
 # export COMMON := ../common
 
 include $(SDK_DIR)/build/rules.mk
