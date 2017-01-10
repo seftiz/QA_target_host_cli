@@ -134,12 +134,12 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 	
 	char char_value[128];
 	int special_values[60]= {
- 6,108,-30,33,1,255,-240,264,0,255,
-0,65535,0,255,0,0,255,
-0,4,1,1000,-96,-35,0,100,-200,200,
-0,255,740,5920,0,30,5180,5930,5180,5930,
--60,60,-100,100,0,4,-1280,1270,-1280,1270,
-0,256,-60,60,-100,100,0,65535,-240,320 } ;
+ 	6,108,-30,33,1,255,-240,264,0,255,
+	0,65535,0,255,0,0,255,
+	0,4,1,1000,-96,-35,0,100,-200,200,
+	0,255,740,5920,0,30,5180,5930,5180,5930,
+	-60,60,-100,100,0,4,-1280,1270,-1280,1270,
+	0,256,-60,60,-100,100,0,65535,-240,320 } ;
 
 	IS_HELP_ARG("mibApi testGet -type1 fIndex -value1 1|2");
 
@@ -215,8 +215,8 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			if (atlk_error(rc))
 				goto finally;
 			strcpy(func_name,"mib_get_wlanTxCsd");
-
-			rc = mib_get_wlanTxCsd(mib_service,&special_values[18]);
+			
+			rc = mib_get_wlanTxCsd(mib_service,&int_value);
 			if (atlk_error(rc))
 				goto finally;
 			strcpy(func_name,"mib_get_wlanTxDiversityEnabled");
@@ -243,7 +243,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 				goto finally;
 			eui48_t eui48_t_value = EUI48_ZERO_INIT;
 			strcpy(func_name,"mib_get_wlanBssid");
-			//rc = mib_get_wlanBssid(mib_service,if_idx,&eui48_t_value);
+			rc = mib_get_wlanBssid(mib_service,if_idx,&eui48_t_value);
 			if (atlk_error(rc))
 				goto finally;
 			strcpy(func_name,"mib_get_wlanDefaultTxPower");
@@ -276,10 +276,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			rc = mib_get_wlanShortRetryLimit(mib_service,if_idx,&special_values[4]);
 			if (atlk_error(rc))
 				goto finally;
-			rc = mib_get_wlanShortRetryLimit(mib_service,if_idx,&special_values[5]);
-			if (atlk_error(rc))
-				goto finally;
-
+		
 			strcpy(func_name,"mib_get_wlanDefaultTxPowerDbm8");
 			
 			rc = mib_get_wlanDefaultTxPowerDbm8(mib_service,if_idx,&special_values[6]);
@@ -341,10 +338,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			rc = mib_get_wlanEdcaCWmin(mib_service,if_idx,&special_values[8]);
 			if (atlk_error(rc))
 				goto finally;
-			rc = mib_get_wlanEdcaCWmin(mib_service,if_idx,&special_values[9]);
-			if (atlk_error(rc))
-				goto finally;
-
+		
 			strcpy(func_name,"mib_get_wlanEdcaCWmax");
 
 			rc = mib_get_wlanEdcaCWmax(mib_service,if_idx,&special_values[10]);
@@ -651,7 +645,7 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 	if (index==5)
 	{
 			strcpy(func_name,"mib_set_wlanConfigSaveStatus");
-			//rc = mib_set_wlanConfigSaveStatus(mib_service,enum_value);
+			rc = mib_set_wlanConfigSaveStatus(mib_service,enum_value);
 			if (atlk_error(rc))
 				goto finally;
 			strcpy(func_name,"mib_set_wlanRxDuplicateFrameFilteringEnabled");
@@ -675,7 +669,7 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 			if (atlk_error(rc))
 				goto finally;
 			strcpy(func_name,"mib_set_wlanRxDiversityEnabled");					
-			//rc = mib_set_wlanRxDiversityEnabled(mib_service,int_value);
+			rc = mib_set_wlanRxDiversityEnabled(mib_service,int_value);
 			if (atlk_error(rc))
 				goto finally;
 	}
@@ -687,7 +681,7 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 				goto finally;
 			strcpy(func_name,"mib_set_wlanBssid");
 			eui48_t eui48_t_value = EUI48_ZERO_INIT;
-			//rc = mib_set_wlanBssid(mib_service,if_idx,eui48_t_value);
+			rc = mib_set_wlanBssid(mib_service,if_idx,eui48_t_value);
 			if (atlk_error(rc))
 				goto finally;
 			strcpy(func_name,"mib_set_wlanDefaultTxPower");
