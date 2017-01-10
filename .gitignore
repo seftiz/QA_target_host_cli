@@ -3,6 +3,7 @@
 *.pyc
 
 # Object files
+*.sw*
 *.o
 *.gdb
 *.d
