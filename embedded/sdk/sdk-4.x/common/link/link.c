@@ -413,11 +413,9 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 			}
       else if (rc == ATLK_OK) {
         rx_timeout = 2;
-	cli_print(cli, "PASS : %u - %s\n",rc, atlk_rc_to_str(rc));
       }
       else if (rc != ATLK_OK ) {
 				rx_timeout = 10 + rc;
-				cli_print(cli, "ERROR :  %u - %s\n",rc, atlk_rc_to_str(rc));
 			}
       
 		} while ( !rx_timeout );
@@ -709,11 +707,10 @@ int cli_test_v2x_link_receive( struct cli_def *cli, const char *command, char *a
 		(void) command;
 
 	user_context *myctx = (user_context *) cli_get_context(cli);
-	char buf[MAX_WAVE_FRAME_SIZE] = {0}; //data_ptr
-	//int msg_count = 0;
-	//size_t size = 1 + snprintf(buf, sizeof(buf), msg_fmt, msg_count);
-	size_t size = sizeof(buf);
-	//size_t *data_size_ptr;
+	char buf[msg_size_max]; //data_ptr
+	int msg_count = 0;
+	size_t size = 1 + snprintf(buf, sizeof(buf), msg_fmt, msg_count);
+	size_t *data_size_ptr;
 	v2x_receive_params_t params = V2X_RECEIVE_PARAMS_INIT;
 	atlk_wait_t wait;
 
@@ -732,11 +729,11 @@ int cli_test_v2x_link_receive( struct cli_def *cli, const char *command, char *a
 		GET_INT("-wait_usec",wait.wait_usec , i, " ");			
 	 }
 
- 	//data_size_ptr = &size;
+ 	data_size_ptr = &size;
 
 	
 
-	rc = v2x_receive(myctx->v2x_socket, buf,&size , &params, &wait);
+	rc = v2x_receive(myctx->v2x_socket, buf,data_size_ptr , &params, &wait);
 
 	if(rc > 0){
 		cli_print ( cli, "ERROR : %u - %s\n", rc, atlk_rc_to_str(rc) );
