@@ -168,6 +168,7 @@ int create_cli_struct( struct cli_def **cli )
  	
   /* link commands */
   c = cli_register_command(*cli, NULL, "link", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "send message frame via SDK");
+
   d = cli_register_command(*cli, c, "service", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set management mibs");
   cli_register_command(*cli, d, "create", cli_v2x_link_service_create, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "open link new socket");
   cli_register_command(*cli, d, "delete", cli_v2x_link_service_delete, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "close link socket");
@@ -179,12 +180,28 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, d, "set", cli_v2x_set_link_socket_addr, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
   cli_register_command(*cli, d, "get", cli_v2x_get_link_socket_addr, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
 	
-	d = cli_register_command(*cli, c, "counters", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Counters");
-	cli_register_command(*cli, d, "reset", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
+  d = cli_register_command(*cli, c, "counters", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Counters");
+  cli_register_command(*cli, d, "reset", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
   cli_register_command(*cli, d, "print", cli_v2x_link_print_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "print Internal link counters");
 
   cli_register_command(*cli, c, "reset_cntrs", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
   cli_register_command(*cli, c, "print_cntrs", cli_v2x_link_print_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "print Internal link counters");
+
+  d = cli_register_command(*cli, c, "api_test", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Api tests"); //chrub
+
+  cli_register_command(*cli, d, "dot4_channel_start", cli_test_v2x_link_dot4_channel_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, " Send IEEE Std 1609.4-2016 service primitive MLMEX-CHSTART.request and receive MLMEX-CHSTART.confirm"); //chrub
+  cli_register_command(*cli, d, "dot4_channel_end", cli_test_v2x_link_dot4_channel_end, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, ""); //chrub
+  cli_register_command(*cli, d, "dot4_channel_end_receive",cli_test_v2x_link_dot4_channel_end_receive , PRIVILEGE_UNPRIVILEGED, MODE_EXEC, ""); //chrub
+  
+  cli_register_command(*cli, d, "send",cli_test_v2x_link_send , PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Send V2X frame"); //chrub
+
+  cli_register_command(*cli, d, "receive",cli_test_v2x_link_receive , PRIVILEGE_UNPRIVILEGED, MODE_EXEC, " Receive V2X frame"); //chrub
+
+  cli_register_command(*cli, d, "socket_create",cli_test_v2x_link_socket_create , PRIVILEGE_UNPRIVILEGED, MODE_EXEC, " Receive V2X frame"); //chrub
+
+  cli_register_command(*cli, d, "service_get", cli_test_v2x_link_service_get, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Get pointer to default V2X service"); //chrub
+
+
 
   /*mib api commands*/
   	d = cli_register_command(*cli, NULL, "mng", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Management mibs");
