@@ -157,7 +157,6 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 		else if (strcmp(type,"uint32")==0 && uint32_value == 0)
 		{
 			GET_UINT32(save_val,uint32_value,i,"get value");
-			uint32_value = 100;
 		}
 		else if (strcmp(type,"uint8")==0 && uint8_value == 0)
 		{	
@@ -191,7 +190,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 		index++;
 	}while (strcmp(type, ""));
 
-	if (index==6)
+	if (index==7)
 	{
 			strcpy(func_name,"mib_get_wlanRxDuplicateFrameFilteringEnabled");
 			rc = mib_get_wlanRxDuplicateFrameFilteringEnabled(mib_service,&int_value);
@@ -215,6 +214,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			if (atlk_error(rc))
 				goto finally;
 			strcpy(func_name,"mib_get_wlanRxDiversityCnt");
+cli_print( cli, " uint32=  %d      ",uint32_value);
 
 			rc = mib_get_wlanRxDiversityCnt(mib_service,&uint32_value);
 			if (atlk_error(rc))
@@ -529,7 +529,7 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 	int int_value = 0;
 	int32_t int32_value = 0;
 	int32_t save = 0;
-	uint32_t uint32_value = 0;
+	uint32_t uint32_value = 100;
 	uint8_t uint8_value = 0;
 	size_t sizet_value = 0;
 	int enum_value = 0;
@@ -591,7 +591,7 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 		index++;
 
 	     	} while (strcmp(type, ""));
-	if (index==5)
+	if (index==6)
 	{
 			strcpy(func_name,"mib_set_wlanRxDuplicateFrameFilteringEnabled");
 			rc = mib_set_wlanRxDuplicateFrameFilteringEnabled(mib_service,int_value);
