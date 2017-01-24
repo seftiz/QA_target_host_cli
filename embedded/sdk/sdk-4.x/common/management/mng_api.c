@@ -212,8 +212,11 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 	}
 	else if (index==11)
 	{
+			int32_value = int_value * 2;
+			uint32_value = int32_value * 2;
+			int32_t in = int32_value;
 			rc = mib_get_wlanDefaultTxDataRate(mib_service,if_idx,&int32_value);
-			
+			int32_value = in;
 				cli_print( cli, "  func  mib_get_wlanDefaultTxDataRate rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
 			eui48_t eui48_t_value = EUI48_ZERO_INIT;
 			rc = mib_get_wlanBssid(mib_service,if_idx,&eui48_t_value);
@@ -239,7 +242,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			rc = mib_get_wlanRxUcastDaFilterEnabled(mib_service,if_idx,&int_value);
 			int_value = save;
 				cli_print( cli, "  func mib_get_wlanRxUcastDaFilterEnabled rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int_value);
-			int32_t in = int32_value;
+			in = int32_value;
 			rc = mib_get_wlanShortRetryLimit(mib_service,if_idx,&int32_value);
 			int32_value = in;
 				cli_print( cli, "  func mib_get_wlanShortRetryLimit rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
@@ -426,10 +429,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 				cli_print( cli, "  func mib_get_wlanPantLutDbm8  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
 
 	}
-	if (atlk_error(rc))
-		cli_print( cli, "ERROR : wlanMib Failed  %d %s\n", rc, atlk_rc_to_str(rc));
-	else
-		cli_print( cli, "PASS: wlanMib Succeeded %d %s\n", rc,atlk_rc_to_str(rc));	
+
   	return atlk_error(rc);
 }
 int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), char *argv[], UNUSED(int argc) )
@@ -534,6 +534,8 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 	}
 	else if (index==11)
 	{
+			int32_value = int_value * 2;
+			uint32_value = int32_value * 2;
 			rc = mib_set_wlanDefaultTxDataRate(mib_service,if_idx,10);
 			
 				cli_print( cli, "  func mib_set_wlanDefaultTxDataRate  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,10);
@@ -692,10 +694,6 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 			
 				cli_print( cli, "  func mib_set_wlanPantLutDbm8  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
 	}
-	if (atlk_error(rc))
-		cli_print( cli, "ERROR : test_mib_api_set Failed %d %s\n", rc, atlk_rc_to_str(rc));
-	else
-		cli_print( cli, "Pass: test_mib_api_set Succeeded %d %s\n", rc, atlk_rc_to_str(rc));	
   	return atlk_error(rc);
 }
 
