@@ -220,7 +220,6 @@ typedef struct {
 #define GET_HEX(_parameter_,_var_,_idx_,_user_msg_) GET_TYPE_INT(_parameter_,_var_, unsigned int, _idx_,_user_msg_,"%x")
 #define GET_UINT8(_parameter_,_var_,_idx_,_user_msg_) GET_TYPE_INT(_parameter_,_var_, uint8_t, _idx_,_user_msg_,"%2hhx")
 #define GET_UINT16(_parameter_,_var_,_idx_,_user_msg_) GET_TYPE_INT(_parameter_,_var_, uint16_t, _idx_,_user_msg_,"%4hx")
-#define GET_UINT32(_parameter_,_var_,_idx_,_user_msg_) GET_TYPE_INT(_parameter_,_var_, uint32_t , _idx_,_user_msg_,"%lu")
 /*
 #define GET_HEX(_parameter_,_var_,_idx_,_user_msg_) {  \
 	if ( (argv[_idx_] != NULL) && (strcmp(argv[_idx_], _parameter_) == 0) ) { \
