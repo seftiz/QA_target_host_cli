@@ -390,7 +390,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
     rx_timeout = 0;
     gettimeofday (&start, NULL);	
 		
-    do {
+    do {	
 			
       rc = v2x_receive(myctx->v2x_socket, buf, &size, &link_sk_rx, NULL);
 
@@ -399,6 +399,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 	double elapsedTime = (current.tv_sec - start.tv_sec) * 1000.0;
 	if ( elapsedTime > timeout ) {
 	  rx_timeout = 1;
+	cli_print(cli,"%#.8x",(int)rx_timeout);
 	}
 	else {
 	  usleep( 1000 );
@@ -406,14 +407,16 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
       }
       else if (rc == ATLK_OK) {
         rx_timeout = 2;
-	//cli_print(cli, "PASS : %u - %s\n",rc, atlk_rc_to_str(rc));
+	cli_print(cli, "PASS : %u - %s\n",rc, atlk_rc_to_str(rc));
       }
       else if (rc != ATLK_OK ) {
 	rx_timeout = 10 + rc;
-	//cli_print(cli, "ERROR :  %u - %s\n",rc, atlk_rc_to_str(rc));
+	cli_print(cli, "ERROR :  %u - %s\n",rc, atlk_rc_to_str(rc));
       }
-      
+      //	cli_print(cli,"%d,%d,%d",rx_timeout,elapsedTime,timeout);
     } while ( !rx_timeout );
+    cli_print(cli, "%u - %s\n",rc, atlk_rc_to_str(rc));
+	
 		
     if ( rx_timeout == 1 ) {
       cli_print(cli, "ERROR : rx time out : %s\n", atlk_rc_to_str(rc));
@@ -691,7 +694,7 @@ int cli_test_v2x_link_send( struct cli_def *cli, const char *command, char *argv
 		cli_print ( cli, "ERROR : %u - %s\n", rc, atlk_rc_to_str(rc) );
 	}
 	else{
-		cli_print ( cli, "PASS %u - %s\n", rc,atlk_rc_to_str(rc) );	
+		cli_print ( cli, "PASS %u - %s, the valus : dest_addr = %s, user_priority = %d, op_class = %d, channel_num = %2hhx, datarate = %d, power_dbm8 %d, expiry_time_ms = %4hx, wait_type = %d, wait_usec = %d \n", rc,atlk_rc_to_str(rc),str_data,params.user_priority, params.channel_id.op_class,  params.channel_id.channel_num,params.datarate,params.power_dbm8,params.expiry_time_ms, (int)wait.wait_type, (int)wait.wait_usec  );	
 	}
 	return rc;
 	
