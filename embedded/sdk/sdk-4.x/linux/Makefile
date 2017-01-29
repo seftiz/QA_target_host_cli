@@ -8,13 +8,21 @@
 
 ifeq ($(SDK_DIR),)
 #SDK_DIR :=  /media/sf_fw_release/sdk-4.11.1-alpha4-sectonm-i686-linux-gnu/
+<<<<<<< HEAD
 SDK_DIR := /media/sf_ATE_proj/sdk-4.11.1-rc2-sc-i686-linux-gnu/
+=======
+#SDK_DIR :=  /media/sf_fw_release/sdk-4.11.1-rc2-sc-i686-linux-gnu/
+>>>>>>> fd7f856db5ae59751784a0e174dde31a2ffce7b4
 COMMON := ../common
 endif
 
 # SDK_DIR := ../../..
 #export SDK_DIR := /media/sf_fw_release/sdk-4.11.1-alpha4-sectonm-i686-linux-gnu/
+<<<<<<< HEAD
 export SDK_DIR := /media/sf_ATE_proj/sdk-4.11.1-rc2-sc-i686-linux-gnu/
+=======
+#export SDK_DIR := /media/sf_fw_release/sdk-4.11.1-rc2-sc-i686-linux-gnu/
+>>>>>>> fd7f856db5ae59751784a0e174dde31a2ffce7b4
 # export COMMON := ../common
 
 include $(SDK_DIR)/build/rules.mk
