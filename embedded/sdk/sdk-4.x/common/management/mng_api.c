@@ -130,8 +130,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 	int enum_value = 0;
 	char char_value[128];
 	int save = 0;
-	int temp;
-
+	
 	IS_HELP_ARG("mibApi testGet -type1 fIndex -value1 1|2");
 
        	
@@ -218,15 +217,15 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			int32_t in = int32_value;
 			rc = mib_get_wlanDefaultTxDataRate(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func  mib_get_wlanDefaultTxDataRate rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func  mib_get_wlanDefaultTxDataRate rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			eui48_t eui48_t_value = EUI48_ZERO_INIT;
 			rc = mib_get_wlanBssid(mib_service,if_idx,&eui48_t_value);
 			
 				cli_print( cli, "  func mib_get_wlanBssid rc %d %s for values %d %2hhx\n",rc,atlk_rc_to_str(rc),if_idx,uint8_value);
-			temp = 30;
-			rc = mib_get_wlanDefaultTxPower(mib_service,if_idx,&temp);
+			in = 30;
+			rc = mib_get_wlanDefaultTxPower(mib_service,if_idx,&in);
 			
-				cli_print( cli, "  func mib_get_wlanDefaultTxPower rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,temp);
+				cli_print( cli, "  func mib_get_wlanDefaultTxPower rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)in);
 			save = int_value;
 			rc = mib_get_wlanRandomBackoffEnabled(mib_service,if_idx,&int_value);
 			int_value = save;
@@ -246,13 +245,13 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			in = int32_value;
 			rc = mib_get_wlanShortRetryLimit(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanShortRetryLimit rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanShortRetryLimit rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 
 			in = int32_value;
 			rc = mib_get_wlanDefaultTxPowerDbm8(mib_service,if_idx,&int32_value);
 			int32_value = in;
 
-				cli_print( cli, "  func mib_get_wlanDefaultTxPowerDbm8 rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanDefaultTxPowerDbm8 rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			save = int_value;
 			rc = mib_get_wlanQosDataEnabled(mib_service,if_idx,&int_value);
 			int_value = save;
@@ -305,27 +304,27 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			in = int32_value;
 			rc = mib_get_wlanCsIntervalA(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanCsIntervalA  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanCsIntervalA  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanCsIntervalB(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanCsIntervalB  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanCsIntervalB  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanCsSyncTolerance(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanCsSyncTolerance  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanCsSyncTolerance  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanChannelProbingInterval(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanChannelProbingInterval  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanChannelProbingInterval  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanChannelLoadThreshold(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanChannelLoadThreshold  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanChannelLoadThreshold  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanChannelBusyRatio(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanChannelBusyRatio  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanChannelBusyRatio  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			u = uint32_value;
 			rc = mib_get_wlanPhyHeaderErrCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
@@ -337,19 +336,19 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			in = int32_value;
 			rc = mib_get_wlanRssiLatestFrame(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRssiLatestFrame  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRssiLatestFrame  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanRficTemperature(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRficTemperature  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRficTemperature  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanRcpiLatestFrame(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRcpiLatestFrame  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRcpiLatestFrame  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanFrequency(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanFrequency  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanFrequency  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanRfFrontEndConnected(mib_service,if_idx,&int_value);
 			int32_value = in;
@@ -361,31 +360,31 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			in = int32_value;
 			rc = mib_get_wlanRfFrontEndOffset(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRfFrontEndOffset  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRfFrontEndOffset  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanPresetFrequency0(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanPresetFrequency0  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanPresetFrequency0  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanPresetFrequency1(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanPresetFrequency1  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanPresetFrequency1  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanTxIqImbalanceAmplitude(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanTxIqImbalanceAmplitude  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanTxIqImbalanceAmplitude  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanTxIqImbalancePhase(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanTxIqImbalancePhase  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanTxIqImbalancePhase  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanPantLutIndex(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanPantLutIndex  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanPantLutIndex  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanTssiDetectorReading(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanTssiDetectorReading  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanTssiDetectorReading  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			save = int_value;
 			rc = mib_get_wlanRfCalibrationRequired(mib_service,if_idx,&int_value);
 			int_value = save;
@@ -393,41 +392,41 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			in = int32_value;
 			rc = mib_get_wlanTssiInterval(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanTssiInterval  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanTssiInterval  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanRxSampleGainLow(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRxSampleGainLow  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRxSampleGainLow  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanRxSampleGainMid(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRxSampleGainMid  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRxSampleGainMid  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanRxSampleGainHigh(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRxSampleGainHigh  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRxSampleGainHigh  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanGrfiSignalDelayResolution(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanGrfiSignalDelayResolution  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanGrfiSignalDelayResolution  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanRxIqImbalanceAmplitude(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRxIqImbalanceAmplitude  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRxIqImbalanceAmplitude  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 
 			in = int32_value;
 			rc = mib_get_wlanRxIqImbalancePhase(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanRxIqImbalancePhase  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanRxIqImbalancePhase  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			in = int32_value;
 			rc = mib_get_wlanLoLeakage(mib_service,if_idx,&int32_value);
 			int32_value = in;
-				cli_print( cli, "  func mib_get_wlanLoLeakage  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanLoLeakage  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 
 			int32_value = 3;
 			rc = mib_get_wlanPantLutDbm8(mib_service,if_idx,&int32_value);
 			
-				cli_print( cli, "  func mib_get_wlanPantLutDbm8  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_get_wlanPantLutDbm8  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 
 	}
 
@@ -568,11 +567,11 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 			
 			rc = mib_set_wlanShortRetryLimit(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanShortRetryLimit  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanShortRetryLimit  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			
 			rc = mib_set_wlanDefaultTxPowerDbm8(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanDefaultTxPowerDbm8 rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanDefaultTxPowerDbm8 rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 		
 			rc = mib_set_wlanQosDataEnabled(mib_service,if_idx,int_value);
 			
@@ -588,27 +587,27 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 	
 			rc = mib_set_wlanCsIntervalA(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanCsIntervalA  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanCsIntervalA  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			
 			
 			rc = mib_set_wlanCsIntervalB(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanCsIntervalB  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value); 
+				cli_print( cli, "  func mib_set_wlanCsIntervalB  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value); 
 		
 			rc = mib_set_wlanCsSyncTolerance(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanCsSyncTolerance  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanCsSyncTolerance  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 		
 			rc = mib_set_wlanChannelProbingInterval(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanChannelProbingInterval  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanChannelProbingInterval  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 
 			save = int32_value;
 			int32_value = -37;
 			
 			rc = mib_set_wlanChannelLoadThreshold(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanChannelLoadThreshold  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanChannelLoadThreshold  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 				int32_value = save;
 			
 			rc = mib_set_wlanDcocEnabled(mib_service,if_idx,int_value);
@@ -620,7 +619,7 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 			
 			rc = mib_set_wlanFrequency(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanFrequency  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanFrequency  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 		
 			
 			rc = mib_set_wlanRfFrontEndConnected(mib_service,if_idx,int_value);
@@ -641,19 +640,19 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 			
 			rc = mib_set_wlanPresetFrequency0(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanPresetFrequency0  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);						
+				cli_print( cli, "  func mib_set_wlanPresetFrequency0  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);						
 			rc = mib_set_wlanPresetFrequency1(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanPresetFrequency1  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanPresetFrequency1  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			
 			int32_value = save;
 		
 			rc = mib_set_wlanTxIqImbalanceAmplitude(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanTxIqImbalanceAmplitude  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);								
+				cli_print( cli, "  func mib_set_wlanTxIqImbalanceAmplitude  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);								
 			rc = mib_set_wlanPantLutIndex(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanPantLutIndex  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);		
+				cli_print( cli, "  func mib_set_wlanPantLutIndex  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);		
 			
 			rc = mib_set_wlanRfCalibrationRequired(mib_service,if_idx,int_value);
 			
@@ -661,40 +660,40 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 			
 			rc = mib_set_wlanTssiInterval(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanTssiInterval  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanTssiInterval  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 		
 			rc = mib_set_wlanRxSampleGainLow(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanRxSampleGainLow  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);	
+				cli_print( cli, "  func mib_set_wlanRxSampleGainLow  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);	
 			
 			rc = mib_set_wlanRxSampleGainMid(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanRxSampleGainMid  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);		
+				cli_print( cli, "  func mib_set_wlanRxSampleGainMid  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);		
 			
 			rc = mib_set_wlanRxSampleGainHigh(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanRxSampleGainHigh  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanRxSampleGainHigh  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 			
 			rc = mib_set_wlanGrfiSignalDelayResolution(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanGrfiSignalDelayResolution  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanGrfiSignalDelayResolution  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 	
 			rc = mib_set_wlanRxIqImbalanceAmplitude(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanRxIqImbalanceAmplitude  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);	
+				cli_print( cli, "  func mib_set_wlanRxIqImbalanceAmplitude  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);	
 			
 			rc = mib_set_wlanRxIqImbalancePhase(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanRxIqImbalancePhase  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);		
+				cli_print( cli, "  func mib_set_wlanRxIqImbalancePhase  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);		
 			
 			rc = mib_set_wlanLoLeakage(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanLoLeakage  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);		
+				cli_print( cli, "  func mib_set_wlanLoLeakage  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);		
 			
 			int32_value = 3;
 			rc = mib_set_wlanPantLutDbm8(mib_service,if_idx,int32_value);
 			
-				cli_print( cli, "  func mib_set_wlanPantLutDbm8  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
+				cli_print( cli, "  func mib_set_wlanPantLutDbm8  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,(int)int32_value);
 	}
 
   	return atlk_error(rc);
