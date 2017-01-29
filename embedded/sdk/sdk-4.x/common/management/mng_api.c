@@ -187,6 +187,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 		i+=2;
 		index++;
 	}while (strcmp(type, ""));
+
 	if (index==6)
 	{
 			save = int_value;
@@ -259,48 +260,48 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			uint32_t u = uint32_value;
 			rc = mib_get_wlanFrameTxCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanFrameTxCnt rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanFrameTxCnt rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanFrameRxCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanFrameRxCnt rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanFrameRxCnt rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 
 			u = uint32_value;
 			rc = mib_get_wlanTxFailCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanTxFailCnt rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanTxFailCnt rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanTxAllocFailCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanTxAllocFailCnt rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanTxAllocFailCnt rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanTxQueueFailCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanTxQueueFailCnt rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanTxQueueFailCnt rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanRxFailCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanRxFailCnt  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanRxFailCnt  rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanRxAllocFailCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanRxAllocFailCnt  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanRxAllocFailCnt  rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanRxQueueFailCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanRxQueueFailCnt  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanRxQueueFailCnt  rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanRxCrcFailCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanRxCrcFailCnt  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanRxCrcFailCnt  rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanEdcaCWmin(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanEdcaCWmin  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanEdcaCWmin  rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			u = uint32_value;
 			rc = mib_get_wlanEdcaCWmax(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanEdcaCWmax  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanEdcaCWmax  rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			in = int32_value;
 			rc = mib_get_wlanCsIntervalA(mib_service,if_idx,&int32_value);
 			int32_value = in;
@@ -328,7 +329,7 @@ int cli_v2x_mibApi_testGet( struct cli_def *cli, UNUSED(const char *command), ch
 			u = uint32_value;
 			rc = mib_get_wlanPhyHeaderErrCnt(mib_service,if_idx,&uint32_value);
 			uint32_value = u;
-				cli_print( cli, "  func mib_get_wlanPhyHeaderErrCnt  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
+				cli_print( cli, "  func mib_get_wlanPhyHeaderErrCnt  rc %d %s for values %d %lu\n",rc,atlk_rc_to_str(rc),if_idx,uint32_value);
 			save = int_value;
 			rc = mib_get_wlanDcocEnabled(mib_service,if_idx,&int_value);
 			int_value = save;
@@ -509,6 +510,7 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 		index++;
 
 	     	} while (strcmp(type, ""));
+
 	if (index==6)
 	{
 			rc = mib_set_wlanRxDuplicateFrameFilteringEnabled(mib_service,int_value);
@@ -694,6 +696,7 @@ int cli_v2x_mibApi_testSet( struct cli_def *cli, UNUSED(const char *command), ch
 			
 				cli_print( cli, "  func mib_set_wlanPantLutDbm8  rc %d %s for values %d %d\n",rc,atlk_rc_to_str(rc),if_idx,int32_value);
 	}
+
   	return atlk_error(rc);
 }
 
@@ -1057,4 +1060,3 @@ int cli_v2x_set_wlanMacAddress( struct cli_def *cli, UNUSED(const char *command)
 exit:
   return atlk_error(rc);
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
