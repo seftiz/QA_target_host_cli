@@ -6,10 +6,10 @@
 #include "../v2x_cli/v2x_cli.h"
 
 #include <atlk/mib_service.h>
-#include <atlk/remote.h>
+//#include <atlk/remote.h>
 #include <atlk/mibs/wlan-mib.h>
 #include <atlk/mibs/snmpv2-mib.h>
-
+#include "../../linux/remote/remote.h"
 
 int cli_v2x_managment_init( void );
 int cli_v2x_managment_service_create( struct cli_def *cli, const char *command, char *argv[], int argc  );
