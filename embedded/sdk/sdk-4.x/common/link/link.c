@@ -89,7 +89,7 @@ int cli_v2x_link_service_create( struct cli_def *cli, const char *command, char 
   
   } 
   else if ( strcmp( (char*) str_data, "remote") == 0 ) {
-#ifdef __linux__
+
 		
     /* Create the remote V2X service */
     atlk_rc_t rc = v2x_remote_service_create( get_active_cli_transport(), NULL, &v2x_service);
@@ -97,9 +97,9 @@ int cli_v2x_link_service_create( struct cli_def *cli, const char *command, char 
       cli_print( cli, "Remote V2X service create: %s\n", atlk_rc_to_str(rc));
       return atlk_error(rc);
     }
-#else 
+
     cli_print( cli, "Remote V2X service is not avaliable" );
-#endif		
+		
   } 
   else {
     cli_print( cli, "ERROR : unknown mode of link api");
@@ -233,7 +233,8 @@ int cli_v2x_link_socket_delete( struct cli_def *cli, const char *command, char *
 
 	rc = v2x_socket_delete(myctx->v2x_socket);
   if ( atlk_error(rc) ) {
-    cli_print ( cli, "ERROR : v2x_socket_delete: %d, %s\n", rc, atlk_rc_to_str(rc) );
+    //cli_print ( cli, "ERROR : v2x_socket_delete: %d, %s\n", rc, atlk_rc_to_str(rc) );
+      cli_print ( cli, "ERROR : %d, %s\n", rc, atlk_rc_to_str(rc) );
     goto error;
   }
 	else {
@@ -419,7 +420,8 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 	
 		
     if ( rx_timeout == 1 ) {
-      cli_print(cli, "ERROR : rx time out : %s\n", atlk_rc_to_str(rc));
+      //cli_print(cli, "ERROR : rx time out : %s\n", atlk_rc_to_str(rc));
+	cli_print(cli, "ERROR : %d - %s\n",rc, atlk_rc_to_str(rc));
       goto error;
     }
     else if (rx_timeout > 10) {
@@ -827,7 +829,7 @@ int cli_test_v2x_link_service_get (struct cli_def *cli, const char *command, cha
 	IS_HELP_ARG("link api_test service_get")
 	CHECK_NUM_ARGS // make sure all parameter are there 
 	
- #ifdef __linux__
+ 
 		rc = v2x_remote_service_create( get_active_cli_transport(), NULL, &v2x_service);
 		if (atlk_error(rc)) {
 			cli_print( cli, "Remote V2X service create: %s\n", atlk_rc_to_str(rc));
@@ -840,7 +842,7 @@ int cli_test_v2x_link_service_get (struct cli_def *cli, const char *command, cha
 	else{
 		cli_print ( cli, "PASS %u - %s\n", rc,atlk_rc_to_str(rc) );
 	}
-#endif
+
 	return rc;
 			
 }
