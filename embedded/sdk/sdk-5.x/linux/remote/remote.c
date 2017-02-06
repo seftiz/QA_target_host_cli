@@ -7,14 +7,14 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdlib.h>
-
+#include <atlk/ddm_service.h>
 #include <atlk/wdm.h>
 #include <atlk/dsm.h>
-#include <dsm_internal.h>
+//#include <dsm_internal.h>
 #include <atlk/wdm_service.h>
 #include <atlk/object.h>
-#include <atlk/eui48_utils.h>
-#include <v2x_internal.h>
+//#include <atlk/eui48_utils.h>
+//#include <v2x_internal.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -29,81 +29,8 @@
 #include <linux/if_ether.h>
 #include <net/if.h>
 #include <netinet/in.h>
-
-//obsolete use of 'transport' object to communicate with target rsvc deamon
-#if 0
-#include <atlk/remote.h>
-#include <atlk/v2x_remote.h>
-
-
-
-/* Remote transport  */
-static remote_transport_t *transport = NULL;
-
-
-remote_transport_t *get_active_cli_transport( void ) {
-	return transport;
-}
-
-
-
-/* Network interface name */
-#define NETWORK_INTERFACE_NAME "eth0"
-
-int cli_create_transport( struct cli_def *cli, const char *command, char *argv[], int argc  ) 
-{
-	/* get user context */
-	// user_context *myctx = (user_context *) cli_get_context(cli);
-	atlk_rc_t rc = ATLK_OK;
-	
-	in_addr_t server_ip4_addr;
-	  /* Local IPv4 address */
-  uint32_t local_ipv4_addr;
-
-	remote_ip_transport_config_t remote_config = REMOTE_IP_TRANSPORT_CONFIG_INIT;	
-	char                  str_data[256] = "";
-
-	(void) command;
-
-
-  IS_HELP_ARG("remote transport create -ip_addr XX.XX.XX.XX [-timeout_ms 1000]");
-
-  CHECK_NUM_ARGS /* make sure all parameter are there */
-
-	remote_config.max_rtt_ms = 1000;
-
-
-	GET_STRING("-ip_addr", str_data, 0, "Set ip addr "); 
-	if ( (server_ip4_addr = inet_addr(str_data)) == INADDR_NONE) {
-		cli_print( cli, "ERROR : %s is not valid ip addr", str_data );		
-		return CLI_ERROR;	
-	}
-
-	if ( argc > 2 ) {
-		GET_INT("-timeout_ms", remote_config.max_rtt_ms, 2, "Specify the number of frames to send");
-	}
-	
-	  /* Get local IPv4 address */
-  rc = remote_util_local_ipv4_address_get(NETWORK_INTERFACE_NAME , &local_ipv4_addr);
-  if (atlk_error(rc)) {
-    cli_print( cli , "remote_transport_local_ipv4_address_get: %s\n", atlk_rc_to_str(rc));
-    return atlk_error(rc);
-  }
-
-  remote_config.local_ipv4_address = local_ipv4_addr;
-	remote_config.remote_ipv4_address = server_ip4_addr;
-	
-	/* Create the transport objects */	
-	rc = remote_ip_transport_create(&remote_config, &transport);
-	if (atlk_error(rc)) { 	 
-		cli_print ( cli, "ERROR : Failed to create transport : %s\n", atlk_rc_to_str(rc));		
-		return atlk_error(rc);	
-	}
-
-	return CLI_OK;
-}
-#endif
-
+#include <atlk/v2x_service.h>
+#include "remote.h"
 #define NETWORK_INTERFACE_NAME "eth0"
 #define SECTON_DEVICE_NAME "Secton"
 static dsm_device_config_t dsm_device;
@@ -232,6 +159,99 @@ sectonRemoteDevice = {
      This part should be done by the driver context.
      In the future, we should assume that this is already done and
   **/
+static atlk_rc_t
+read_file_contents(const char *path, char **buf_ptr, size_t *size)
+{
+  int f;
+  int rv;
+  struct stat file_stat;
+  ssize_t read_size;
+
+  rv = stat(path, &file_stat);
+
+  if (rv == -1) {
+    printf("%s:\n", path);
+    perror("Unable to stat");
+    return ATLK_E_UNSPECIFIED;
+  }
+
+  *size = file_stat.st_size;
+  if (*size == 0) {
+    *buf_ptr = NULL;
+    return ATLK_OK;
+  }
+
+  *buf_ptr = (void *)malloc(*size);
+  if (!(*buf_ptr)) {
+    return ATLK_E_OUT_OF_MEMORY;
+  }
+
+  f = open(path, O_RDONLY);
+  if (f == -1) {
+    printf("%s:\n", path);
+    perror("Unable to open");
+    return ATLK_E_UNSPECIFIED;
+  }
+
+  read_size = read(f, *buf_ptr, *size);
+  if (read_size < 0) {
+    perror("read failed");
+    return ATLK_E_UNSPECIFIED;
+  }
+
+  if ((size_t)read_size != *size) {
+    printf("Supposed to read %zu bytes, instead read %zu bytes from %s\n",
+           *size, read_size, path);
+    return ATLK_E_UNSPECIFIED;
+  }
+
+  close(f);
+
+  return ATLK_OK;
+}
+
+
+static void
+status_change_handler(ddm_service_t *service_ptr, ddm_status_t status)
+{
+	printf("%p: new state %d\n", service_ptr, status);
+}
+
+
+static atlk_rc_t
+ddm_config_init(ddm_configure_t *config)
+{
+  atlk_rc_t rc;
+
+  if (config == NULL) {
+    return ATLK_E_INVALID_ARG;
+  }
+
+  rc = read_file_contents(DSP_CODE_PATH,
+                          &config->code_buffer_ptr,
+                          &config->code_size);
+  if (atlk_error(rc)) {
+    return rc;
+  }
+
+  rc = read_file_contents(DSP_DATA_PATH,
+                          &config->data_buffer_ptr,
+                          &config->data_size);
+  if (atlk_error(rc)) {
+    return rc;
+  }
+
+  rc = read_file_contents(DSP_CACHE_PATH,
+                          &config->cache_buffer_ptr,
+                          &config->cache_size);
+  if (atlk_error(rc)) {
+    return rc;
+  }
+
+  return ATLK_OK;
+}
+
+
 
 //SECTON new remote registration method...
 
@@ -243,11 +263,12 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
   // user_context *myctx = (user_context *) cli_get_context(cli);
   atlk_rc_t rc = ATLK_OK;
   char  hw_addr[256] = {'\0'};
+  ddm_service_t *ddm_service_ptr = NULL;
 
   struct sockaddr_ll local_addr;
   int socket_fd;
   int rv;
-
+  int retries;
   int ifindex;
   int fd;
   struct ifreq ifr;
@@ -255,7 +276,9 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
   unsigned char *host_hw_addr = NULL;
   char host_hw_addr_string[80] = {'\0'};
   (void) command;
-
+  ddm_status_t ddm_status;
+  ddm_configure_t ddm_config = DDM_CONFIGURE_INIT;
+  atlk_wait_t wait;
 
   IS_HELP_ARG("register to remote device -hw_addr -device_type ");
 
@@ -338,13 +361,13 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
 
   context = socket_fd;
 
-
+/*
   rc = dsm_module_init();
   if (atlk_error(rc)) {
 		  cli_print ( cli, "ERROR : Failed to initilize dsm : %s", atlk_rc_to_str(rc));	  
 		  return atlk_error(rc);  
   }
-
+*/
   dsm_device.device_name = SECTON_DEVICE_NAME;
   //dsm_device.device_type = device_type;
   dsm_device.rdev_ptr = &sectonRemoteDevice;
@@ -361,6 +384,83 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
 	  return atlk_error(rc);  
   }
 
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////// handle ddm - start //////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  rc = ddm_service_get(NULL, &ddm_service_ptr);
+  if (atlk_error(rc)) {
+	  cli_print ( cli, "ERROR :ddm_service_get failed: %s",  atlk_rc_to_str(rc));
+    return EXIT_FAILURE;
+  }
+
+  rc = ddm_status_change_notify_register(ddm_service_ptr,
+                                         status_change_handler);
+  if (atlk_error(rc)) {
+	  cli_print ( cli, "ERROR :ddm_status_change_notify_register failed: %s",
+                  atlk_rc_to_str(rc));
+    return EXIT_FAILURE;
+  }
+
+  rc = ddm_status_get(ddm_service_ptr, &ddm_status, &atlk_wait_forever);
+  if (atlk_error(rc)) {
+	  cli_print ( cli, "ERROR :ddm_status_get failed: %s", atlk_rc_to_str(rc));
+    return EXIT_FAILURE;
+  }
+
+  cli_print ( cli, "ddm_status: %d", ddm_status);
+
+  rc = ddm_config_init(&ddm_config);
+  if (atlk_error(rc)) {
+	  cli_print ( cli, "ERROR :** Device config files missing, "\
+            "not initializing device ** ");
+  }
+  else {
+    retries = 3;
+    wait.wait_type = ATLK_WAIT_INTERVAL;
+    wait.wait_usec = 1000000;
+    do {
+      rc = ddm_configuration_set(ddm_service_ptr,
+                                &ddm_config,
+                                &wait);
+      if (atlk_error(rc)) {
+        switch (rc) {
+          case ATLK_E_EXISTS:
+        	  cli_print ( cli, "ERROR :Configuration already loaded");
+            rc = ATLK_OK;
+            break;
+
+          case ATLK_E_INVALID_STATE:
+            cli_print ( cli, "ERROR :ddm_configuration_set invalid state, retrying...");
+            break;
+
+          case ATLK_E_TIMEOUT:
+        	  cli_print ( cli, "ERROR :ddm_configuration_set timedout, retrying...");
+            break;
+
+          default:
+        	  cli_print ( cli, "ERROR :ddm_configuration_set failed, %s",
+                          atlk_rc_to_str(rc));
+            return EXIT_FAILURE;
+        }
+        retries--;
+        if (retries <= 0) {
+        	cli_print ( cli, "ERROR :ddm_configuration_set exceeded max retries");
+          return EXIT_FAILURE;
+        }
+        if (rc == ATLK_E_INVALID_STATE) {
+          usleep(1000000);
+        }
+      }
+    } while(atlk_error(rc));
+  }
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////// handle ddm - end   //////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
   return ATLK_OK;
 }
 
@@ -371,7 +471,12 @@ cli_service_register(struct cli_def *cli, const char *command, char *argv[], int
 
   /* get user context */
   // user_context *myctx = (user_context *) cli_get_context(cli);
+
   atlk_rc_t rc = ATLK_OK;
+
+  (void) command;
+  (void) argc;
+
   IS_HELP_ARG("register to remote service -service_name -service_type ");
   char  service_name[256] = "";
   GET_STRING("-service_name", service_name, 0, "Set service name ");

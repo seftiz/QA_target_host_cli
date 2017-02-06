@@ -1,47 +1,46 @@
+# Autotalks SDK directory
+ATLK_SDK_DIR := /docs/ATE/fw_releases/secton-sdk-5.1.1-alpha3
 
-## Copyright (C) 2013 Autotalks Ltd.
 
-# To build the example outside of the SDK directory please change SDK_DIR
-# to the path of the SDK directory
-# SDK_DIR := $(HOME)/fw_release/sdk-3.2-beta4-pangaea4-i686-linux-gnu
-# COMMON := ../common
-
-ifeq ($(SDK_DIR),)
-SDK_DIR := /home/zohars/craton-host/host
 COMMON := ../common
 APPS := ../apps
-endif
-
-# SDK_DIR := ../../..
-export SDK_DIR := /home/zohars/craton-host/host
-# export COMMON := ../common
-
-#TARGET := remote
-#PLATFORM := linux_u
-include build/rules.mk
-#include $(SDK_DIR)/build/common.mk
-#include $(SDK_DIR)/build/rules.mk
-
-include  build/host.mk
 
 
-SDK_LIB_DIR := $(SDK_DIR)/sdk/remote_linux_u/lib
+# Autotalks SDK library directory
+ATLK_SDK_LIB_DIR := $(ATLK_SDK_DIR)/lib
 
-CFLAGS := -std=c99  -Wextra -g -D_XOPEN_SOURCE=600 -D_BSD_SOURCE
+# Autotalks include directory
+ATLK_SDK_INCLUDE_DIR := $(ATLK_SDK_DIR)/include
 
-CFLAGS += -I$(SDK_DIR)/include
-CFLAGS += -I$(SDK_DIR)/src/core/include
-LDFLAGS := -latlkremote_linux_u -lcrypt -L$(SDK_LIB_DIR) 
+# Autotalks library name
+ATLK_SDK_LIB := atlkremote_linux_u
 
-.DEFAULT_GOAL := $(HOST)/bin/v2x-cli
+# Common C compilation flags
+ATLK_CFLAGS := -std=gnu99 -Wall -Wextra -Werror
 
-$(HOST)/bin/v2x-cli: \
-	$(HOST)/obj/libcli/libcli.o \
-	$(HOST)/obj/$(APPS)/sniffer/sniffer.o \
-	$(HOST)/obj/$(COMMON)/v2x_cli/v2x_cli.o \
-	$(HOST)/obj/$(COMMON)/general/general.o \
-	$(HOST)/obj/$(COMMON)/link/link.o \
-	$(HOST)/obj/remote/remote.o
+# Target application name
+TARGET_APP := v2x_cli
 
-clean: 
-	rm -rf $(HOST)
+
+# Target source files
+TARGET_SRCS := libcli/libcli.c 
+TARGET_SRCS += $(APPS)/sniffer/sniffer.c
+TARGET_SRCS += $(COMMON)/v2x_cli/v2x_cli.c
+TARGET_SRCS += $(COMMON)/general/general.c
+TARGET_SRCS += $(COMMON)/link/link.c
+TARGET_SRCS += remote/remote.c
+
+# Additional common libraries
+ADDITIONAL_LIBS:= -lpthread -lcrypt -lrt
+               
+$(TARGET_APP):$(TARGET_SRCS)
+	$(CC) -DDSP_CODE_PATH="\"$(ATLK_SDK_DIR)/device/dsp_sw_code.bin\"" -DDSP_DATA_PATH="\"$(ATLK_SDK_DIR)/device/dsp_sw_data.bin\"" -DDSP_CACHE_PATH="\"$(ATLK_SDK_DIR)/device/dsp_sw_code_cache.bin\"" \
+	$(ATLK_CFLAGS) $(TARGET_SRCS) -o $(TARGET_APP) \
+	-I$(ATLK_SDK_INCLUDE_DIR) -L$(ATLK_SDK_LIB_DIR) \
+	-l$(ATLK_SDK_LIB) $(ADDITIONAL_LIBS) \
+
+all: $(TARGET_APP)
+
+clean:
+	rm -rf $(TARGET_APP)
+

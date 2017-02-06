@@ -81,10 +81,10 @@ static uint8_t      cli_main_thread_stack[CLI_THREAD_STACKSIZE];
 #endif
 
 
-
+/*
 #define container_of(ptr, type, member) \
 	(type *)((char *)ptr - ((unsigned int) &((type *)0)->member))
-
+*/
 
 
 struct list_head  cli_thread_list;

@@ -44,13 +44,14 @@ static v2x_service_t                        *v2x_service_ptr = NULL;
 // /* Sync loss indication */
 //static int is_sync_loss = 0;
 /* channel access configuration */
+/*
 #define V2X_DOT4_CHANNEL_START_REQUEST_INIT {  \
  .if_index = V2X_IF_INDEX_NA,                  \
  .channel_id = V2X_CHANNEL_ID_INIT,            \
  .time_slot = V2X_TIME_SLOT_NA,                \
  .immediate_access = 0                         \
 }
-
+*/
 #ifdef __THREADX__
 ///////////////////                   /////////////////////////////////////////
 ///////////////////   WAVE  IPv6      /////////////////////////////////////////
@@ -190,8 +191,8 @@ int cli_v2x_link_service_delete( struct cli_def *cli, const char *command, char 
   atlk_rc_t             rc    = ATLK_OK;
 
 
-  //disable till support will be available from SDK
-  #if 0
+
+
 
   (void) command;
   
@@ -204,8 +205,10 @@ int cli_v2x_link_service_delete( struct cli_def *cli, const char *command, char 
   }
 	
 	syslog( LOG_DEBUG, "v2x_service_delete pointer is %p", (void*) v2x_service );
-
+	//disable till support will be available from SDK
+#if 0
 	rc = v2x_service_delete(v2x_service);
+#endif
   if ( atlk_error(rc) ) {
     cli_print ( cli, "ERROR : v2x_service_delete: %d, %s\n", rc, atlk_rc_to_str(rc) );
     goto error;
@@ -213,7 +216,7 @@ int cli_v2x_link_service_delete( struct cli_def *cli, const char *command, char 
 
 error:
   v2x_service = NULL;
-#endif
+
   return atlk_error(rc);
   
 }

@@ -354,9 +354,9 @@ static inline void list_splice_tail_init(struct list_head *list,
    *
    */
 
-/*#define container_of(ptr, type, member) \
+#define container_of(ptr, type, member) \
                       ((type *) ((char *)(ptr) - offsetof(type, member)))
-*/
+
 
 /**
   Get the struct for this entry
