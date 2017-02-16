@@ -12,7 +12,7 @@
 #include <atlk/dsm.h>
 //#include <dsm_internal.h>
 #include <atlk/wdm_service.h>
-#include <atlk/object.h>
+
 //#include <atlk/eui48_utils.h>
 //#include <v2x_internal.h>
 #include <sys/socket.h>

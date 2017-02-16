@@ -38,8 +38,6 @@
 #include "../../common/nav_api/nav_api.h"
 #endif
 #include "../../common/link/link.h"
-#include "../../threadx/ecc/ecc.h"
-
 
 //#ifdef __linux__
 #include "../../linux/remote/remote.h"

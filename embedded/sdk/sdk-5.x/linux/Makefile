@@ -1,5 +1,5 @@
 # Autotalks SDK directory
-ATLK_SDK_DIR := /docs/ATE/fw_releases/secton-sdk-5.1.1-alpha3
+ATLK_SDK_DIR :=/media/sf_fw_release/secton-sdk-5.2.0-alpha1
 
 
 COMMON := ../common
