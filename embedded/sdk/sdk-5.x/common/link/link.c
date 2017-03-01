@@ -25,7 +25,7 @@
 #include "../../linux/remote/remote.h"
 
 static v2x_service_t 						*v2x_service = NULL;
-static v2x_service_t                        *v2x_service_ptr = NULL;
+
 // /* End indication thread */
 // /* thread priority */
 // #ifdef __THREADX__
@@ -236,8 +236,18 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
   
   IS_HELP_ARG("link socket create -if_idx 1|2 [-frame_type data|vsa] [-protocol_id 0xXXXX|0xXXXXXXXXXX]")
 
+ 
+
   CHECK_NUM_ARGS /* make sure all parameter are there */
   
+
+ // get v2x service
+  
+    rc = v2x_service_get(NULL, &v2x_service);
+    if (atlk_error(rc)) {
+      cli_print( cli, "ERROR :v2x_service_get failed: %s\n", atlk_rc_to_str(rc));
+      return EXIT_FAILURE;
+    }
   GET_INT("-if_idx", link_sk_params.if_index, i, "Specify interface index");
   if ( link_sk_params.if_index < 1 || link_sk_params.if_index > 4) {
     cli_print(cli, "ERROR : if_index is not optional and must be in range of 1-4");
@@ -290,8 +300,7 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
     }
   }
 
-
-  rc = v2x_socket_create(v2x_service_ptr, &myctx->v2x_socket, &link_sk_params);
+  rc = v2x_socket_create(v2x_service, &myctx->v2x_socket, &link_sk_params);
   if (atlk_error(rc)) {
     cli_print(cli, "ERROR : v2x_socket_create: %s\n", atlk_rc_to_str(rc));
     goto error;

@@ -31,12 +31,15 @@
 #include <netinet/in.h>
 #include <atlk/v2x_service.h>
 #include "remote.h"
-#define NETWORK_INTERFACE_NAME "eth0"
+#define NETWORK_INTERFACE_NAME "eth1"
 #define SECTON_DEVICE_NAME "Secton"
 static dsm_device_config_t dsm_device;
 static dsm_service_config_t dsm_service;
 
 static int context;
+#define CODE_PATH "./dsp_sw_code.bin"
+#define DATA_PATH "./dsp_sw_data.bin"
+#define CACHE_PATH "./dsp_sw_code_cache.bin"
 
 
 /* Device descriptor */
@@ -227,21 +230,21 @@ ddm_config_init(ddm_configure_t *config)
     return ATLK_E_INVALID_ARG;
   }
 
-  rc = read_file_contents(DSP_CODE_PATH,
+  rc = read_file_contents(CODE_PATH,
                           &config->code_buffer_ptr,
                           &config->code_size);
   if (atlk_error(rc)) {
     return rc;
   }
 
-  rc = read_file_contents(DSP_DATA_PATH,
+  rc = read_file_contents(DATA_PATH,
                           &config->data_buffer_ptr,
                           &config->data_size);
   if (atlk_error(rc)) {
     return rc;
   }
 
-  rc = read_file_contents(DSP_CACHE_PATH,
+  rc = read_file_contents(CACHE_PATH,
                           &config->cache_buffer_ptr,
                           &config->cache_size);
   if (atlk_error(rc)) {
@@ -279,13 +282,14 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
   ddm_status_t ddm_status;
   ddm_configure_t ddm_config = DDM_CONFIGURE_INIT;
   atlk_wait_t wait;
-
-  IS_HELP_ARG("register to remote device -hw_addr -device_type ");
+  char if_name[16] = {"eth1"};
+  IS_HELP_ARG("register to remote device -hw_addr -device_type -if");
 
   CHECK_NUM_ARGS /* make sure all parameter are there */
   	
   GET_STRING("-hw_addr", hw_addr, 0, "Get MAC address  xx:yy:ee:ff:gg:cc (MAC address)");
   GET_INT("-device_type", device_type, 2, "Set device type [DSM_DEVICE_TYPE_CRATON2 = 0, DSM_DEVICE_TYPE_SECTON = 1]");
+  GET_STRING("-if", if_name, 4, "Get net interface name (for example eth1)");
 
   if (hw_addr[0] != '\0' && sscanf(hw_addr, "%x:%x:%x:%x:%x:%x",
            (unsigned int *)&(sectonRemoteDevice.rdev_address.octets[0]),
@@ -323,7 +327,7 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
   sprintf(host_hw_addr_string, "%.2X:%.2X:%.2X:%.2X:%.2X:%.2X", host_hw_addr[0], host_hw_addr[1], host_hw_addr[2], host_hw_addr[3], host_hw_addr[4], host_hw_addr[5]);
   cli_print(cli, "[%d] host hw addr %.2X:%.2X:%.2X:%.2X:%.2X:%.2X", __LINE__, host_hw_addr[0], host_hw_addr[1], host_hw_addr[2], host_hw_addr[3], host_hw_addr[4], host_hw_addr[5]);
 
-  ifindex = if_nametoindex(NETWORK_INTERFACE_NAME);
+  ifindex = if_nametoindex(if_name);
 
   if (ifindex == 0) {
     perror("if_nametoindex");
@@ -384,6 +388,22 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
 	  return atlk_error(rc);  
   }
 
+  dsm_service.service_name = "DDM";
+  dsm_service.service_type = DSM_SERVICE_TYPE_DDM;
+  /* The name bundles the service to the specific device */
+  dsm_service.device_name = SECTON_DEVICE_NAME;
+  rc = dsm_service_register(&dsm_service, (size_t)1);
+  if (atlk_error(rc)) {
+  	  cli_print ( cli, "ERROR : Failed to register ddm service : %s", atlk_rc_to_str(rc));
+  	  return atlk_error(rc);
+    }
+  cli_print(cli, "[%d] ddm service registration rc = %d", __LINE__, (int)rc);
+  rc = dsm_service_init(dsm_service.service_name, ATLK_FOREVER);
+  if (atlk_error(rc)) {
+	  cli_print ( cli, "ERROR : Failed to init ddm service : %s", atlk_rc_to_str(rc));
+	  return atlk_error(rc);
+  }
+
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////// handle ddm - start //////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -413,7 +433,7 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
   rc = ddm_config_init(&ddm_config);
   if (atlk_error(rc)) {
 	  cli_print ( cli, "ERROR :** Device config files missing, "\
-            "not initializing device ** ");
+            "not initializing device ** %s", atlk_rc_to_str(rc));
   }
   else {
     retries = 3;
