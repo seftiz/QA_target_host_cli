@@ -35,7 +35,7 @@
 #define SECTON_DEVICE_NAME "Secton"
 static dsm_device_config_t dsm_device;
 static dsm_service_config_t dsm_service;
-
+#include <netinet/ether.h>  
 static int context;
 #define CODE_PATH "./dsp_sw_code.bin"
 #define DATA_PATH "./dsp_sw_data.bin"
@@ -426,7 +426,7 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
         switch (rc) {
           case ATLK_E_EXISTS:
         	  cli_print ( cli, "ERROR :Configuration already loaded");
-        	  return ATLK_OK
+        	  return ATLK_OK;
 
           case ATLK_E_INVALID_STATE:
             cli_print ( cli, "ERROR :ddm_configuration_set invalid state, retrying...");
