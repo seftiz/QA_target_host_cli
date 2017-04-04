@@ -202,8 +202,15 @@ int create_cli_struct( struct cli_def **cli )
 
   cli_register_command(*cli, c, "reset_cntrs", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
   cli_register_command(*cli, c, "print_cntrs", cli_v2x_link_print_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "print Internal link counters");
+
+//trying:
+	d = cli_register_command(*cli, c, "get_info", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Information");
+	cli_register_command(*cli, d, "about_sdk",cli_v2x_cmd_sdk_version, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Get information about sdk version");
+
+//till here
+
   d = cli_register_command(*cli, c, "dot4", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set dot4 CS");
-	//cli_register_command(*cli, d, "start_ch", cli_v2x_dot4_channel_start_req, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "send dot4 channel start request");
+  cli_register_command(*cli, d, "start_ch", cli_v2x_dot4_channel_start_req, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "send dot4 channel start request");
 #ifdef __THREADX__
 	  d = cli_register_command(*cli, c, "sniffer", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Sniffer app from wlan to udp");
 	  cli_register_command(*cli, d, "start", cli_qa_sniffer_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start sniffer");

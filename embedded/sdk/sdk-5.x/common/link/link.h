@@ -4,6 +4,7 @@
 
 #include "../../linux/libcli/libcli.h"
 
+int cli_v2x_cmd_sdk_version( struct cli_def *cli, const char *command, char *argv[], int argc );
 
 int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *argv[], int argc );
 int cli_v2x_link_socket_delete( struct cli_def *cli, const char *command, char *argv[], int argc );

@@ -12,7 +12,9 @@
 #include <unistd.h>
 #include <atlk/v2x_service.h>
 #include <atlk/v2x.h>
-
+#include <atlk/ddm_service.h>
+#include <atlk/wdm_service.h>
+#include <atlk/version_string.h>
 #ifdef __THREADX__
 #include <tx_api.h>
 #include <nx_api.h>
@@ -24,8 +26,16 @@
 #include "link.h"
 #include "../../linux/remote/remote.h"
 
-static v2x_service_t 						*v2x_service = NULL;
+//trying
+typedef struct {
+  ddm_service_t *ddm_service_ptr;
+  wdm_service_t *wdm_service_ptr;
+  v2x_service_t *v2x_service_ptr;
+  int32_t ddm_init;
+} diag_cli_services_t;
+//till here
 
+static v2x_service_t 						*v2x_service = NULL;
 // /* End indication thread */
 // /* thread priority */
 // #ifdef __THREADX__
@@ -292,8 +302,8 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
       }
     }                                                   \
   }
-  if (v2x_service_ptr == NULL) {
-		rc = v2x_service_get(NULL, &v2x_service_ptr);
+  if (v2x_service == NULL) {
+		rc = v2x_service_get(NULL, &v2x_service);
     if (atlk_error(rc)) {
       fprintf(stderr, "v2x_service_get failed: %d\n", rc);
       return EXIT_FAILURE;
@@ -385,6 +395,7 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
     GET_INT("-power_dbm8", link_sk_tx_param.power_dbm8, i, "Sets the mac interface to transmit from");
     GET_STRING("-dest_addr", str_data, i, "Set destination mac address"); 
     GET_INT("-op_class", link_sk_tx_param.channel_id.op_class, i, "Specify operational class");
+    GET_INT("-time_slot", link_sk_tx_param.channel_id.time_slot, i, "which alternating access is requested");
     GET_INT("-ch_idx", link_sk_tx_param.channel_id.channel_num, i, "Sets the channel number (band) to be used");
   } 
   
@@ -418,6 +429,13 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 		}
 		memset( tx_data, 70, payload_len); /* FF */
   }
+//nomiro add:
+  else if (strcmp(tx_data,"Dot4") == 0){
+	cli_print(cli, "In dot4 mode\n");
+	//erer will be some dev	
+  }
+
+//until here	
 	/*handle special case to support CHS TCs*/
   if ((strcmp(tx_data, "CHS") == 0) && (payload_len > 0)){
 	  memset((char *)tx_data, 0, sizeof(tx_data));
@@ -627,7 +645,7 @@ int cli_v2x_set_link_socket_addr( struct cli_def *cli, const char *command, char
 
 
 //disable till support will be available from SDK
-#if 0
+
 
 int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, char *argv[], int argc)
 {
@@ -645,6 +663,13 @@ int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, cha
 
   (void) command;
 
+ // get v2x service
+  
+    rc = v2x_service_get(NULL, &v2x_service);
+    if (atlk_error(rc)) {
+      cli_print( cli, "ERROR :v2x_service_get failed: %s\n", atlk_rc_to_str(rc));
+      return EXIT_FAILURE;
+    }
 
   /* get user context */
   //user_context *myctx = (user_context *) cli_get_context(cli);
@@ -667,7 +692,7 @@ int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, cha
 	  request.if_index = if_index;
 	  request.channel_id.op_class = op_class;
 	  request.channel_id.channel_num = chan_id;
-	  request.time_slot = slot_id;
+	  request.channel_id.time_slot = slot_id;
 	  request.immediate_access = imm_acc;
 
 
@@ -724,6 +749,69 @@ int cli_v2x_dot4_channel_end_req(struct cli_def *cli, const char *command, char 
 
 }
 
+
+//trying:
+
+/* Show SDK version via CLI */
+int cli_v2x_cmd_sdk_version(struct cli_def *cli,
+                    const char *command,
+                    char *argv[],
+                    int argc)
+{
+(void) command;
+(void) argv;
+(void) argc;
+
+  char sdk_version[256];
+  size_t sdk_version_size;
+  ddm_service_t *ddm_service = 
+    ((diag_cli_services_t *)cli_get_context(cli))->ddm_service_ptr;
+  wdm_service_t *wdm_service = 
+    ((diag_cli_services_t *)cli_get_context(cli))->wdm_service_ptr;
+  char *sdk_ver = sdk_version;
+  atlk_rc_t rc;
+  wdm_dsp_version_t dsp_version;
+
+  sdk_version_size = sizeof(sdk_version);
+  rc = ddm_version_get(ddm_service, sdk_version, &sdk_version_size);
+  if (atlk_error(rc)) {
+    cli_print(cli, "failed to get SDK version rc=%d", rc);
+  //  return CLI_ERROR;
+  }
+
+  cli_print(cli, "Host:");
+  cli_print(cli,
+            "  SDK version: %d.%d.%d",
+            ATLK_SDK_VER_MAJOR,
+            ATLK_SDK_VER_MINOR,
+            ATLK_SDK_VER_PATCH);
+  cli_print(cli, "  Software version: %s", HOST_SDK_REV_ID);
+
+  cli_print(cli, "Device:");
+
+  cli_print(cli, "  SDK version: %s", sdk_ver);
+  
+  sdk_ver = sdk_ver + strlen(sdk_version) + 1;
+  cli_print(cli, "  Software version: %s", sdk_ver);
+
+  rc = wdm_dsp_version_get(wdm_service, &dsp_version);
+  if (atlk_error(rc)) {
+    cli_print(cli, "failed to get WDM DSP version rc=%d", rc);
+    return CLI_ERROR;
+  }
+
+  cli_print(cli, "DSP:");
+
+  cli_print(cli,
+            "  Software version: %"PRIu8".%"PRIu8".%"PRIu8,
+            dsp_version.major,
+            dsp_version.minor,
+            dsp_version.sw_revision);
+
+  return CLI_OK;
+}
+
+//till here
 
 
 // #ifdef __THREADX__
@@ -1055,27 +1143,9 @@ int cli_v2x_wave6_rx(struct cli_def *cli, const char *command, char *argv[], int
     if (elapsed_from_session_start > timeout) {
 		cli_print(cli, "ERROR : rx session timed out:");
 		goto error;
-    }
-
-    /* Print length and first bytes of received packet */
-    if (udp_packet->nx_packet_prepend_ptr[udp_packet->nx_packet_length - 1]
-        != '\0') {
-    	cli_print(cli, "Received a bad message (not zero-terminated)");
-    }
-/*
-    else {
-    	cli_print(cli, "Received message: \"%s\"", udp_packet->nx_packet_prepend_ptr);
-    }
-*/
-
-    /* Release the packet */
-    nx_packet_release(udp_packet);
-  }
   error:
-    nx_udp_socket_unbind(&udp_socket);
-    nx_udp_socket_delete(&udp_socket);
-    return atlk_error(rc);
-
+  nx_udp_socket_unbind(&udp_socket);
+  nx_udp_socket_delete(&udp_socket);
+  return rc;
 }
-#endif
 #endif
