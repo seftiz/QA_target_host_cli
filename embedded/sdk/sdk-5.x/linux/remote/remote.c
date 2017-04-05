@@ -474,9 +474,9 @@ cli_service_register(struct cli_def *cli, const char *command, char *argv[], int
 
   (void) command;
   (void) argc;
-  dsm_service.device_name = SECTON_DEVICE_NAME;
-  IS_HELP_ARG("register to remote service -service_name -service_type ");
-  char  service_name[256] = "", device_name[256] = "";
+  
+  IS_HELP_ARG("register to remote service -service_name -service_type -device_name");
+  char  service_name[256] = "", device_name[256] = SECTON_DEVICE_NAME;
   GET_STRING("-service_name", service_name, 0, "Set service name ");
   GET_INT("-service_type", dsm_service.service_type, 2, "Set service type [DSM_SERVICE_TYPE_V2X = 0, DSM_SERVICE_TYPE_ECC, DSM_SERVICE_TYPE_HSM, DSM_SERVICE_TYPE_WDM, DSM_SERVICE_TYPE_DEV]");
   GET_STRING("-device_name", device_name, 4, "Set device name ");
