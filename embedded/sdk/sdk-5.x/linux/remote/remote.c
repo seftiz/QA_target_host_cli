@@ -10,11 +10,10 @@
 #include <atlk/ddm_service.h>
 #include <atlk/wdm.h>
 #include <atlk/dsm.h>
-//#include <dsm_internal.h>
+
 #include <atlk/wdm_service.h>
 
-//#include <atlk/eui48_utils.h>
-//#include <v2x_internal.h>
+
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -31,11 +30,20 @@
 #include <netinet/in.h>
 #include <atlk/v2x_service.h>
 #include "remote.h"
+#include <netinet/ether.h>
+#include "../link_layer/link_layer.h"
+
 #define NETWORK_INTERFACE_NAME "eth1"
 #define SECTON_DEVICE_NAME "Secton"
+#define CRATON2_DEVICE_NAME "Craton2"
 static dsm_device_config_t dsm_device;
 static dsm_service_config_t dsm_service;
-#include <netinet/ether.h>  
+
+/* Length of Ethernet device interface string */
+#define ETH_DEV_NAME_LEN IF_NAMESIZE
+/* Ethernet interface name */
+static char eth_dev_name[ETH_DEV_NAME_LEN];
+
 static int context;
 #define CODE_PATH "./dsp_sw_code.bin"
 #define DATA_PATH "./dsp_sw_data.bin"
@@ -286,76 +294,100 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
   dsm_device.device_type = device_type;
   cli_print(cli, "device type %d", device_type);
   cli_print(cli, "device type %d", dsm_device.device_type);
-  memset(&ifr, 0, sizeof(ifr));
+  
 
-  fd = socket(AF_INET, SOCK_DGRAM, 0);
+  ////////////////////////////////////////////////////////
+  //////  remote host sectgon registration  /////////////
+  //////////////////////////////////////////////////////
+  if (DSM_DEVICE_TYPE_SECTON == device_type) {
+	  memset(&ifr, 0, sizeof(ifr));
 
-  cli_print(cli, "[%d] socket fd %d", __LINE__, fd);
-  ifr.ifr_addr.sa_family = AF_INET;
-  strncpy(ifr.ifr_name , NETWORK_INTERFACE_NAME , ETH_DEV_NAME_LEN);
+	   fd = socket(AF_INET, SOCK_DGRAM, 0);
 
-  if (0 == ioctl(fd, SIOCGIFHWADDR, &ifr)) {
-	  host_hw_addr = (unsigned char *)ifr.ifr_hwaddr.sa_data;
+	   cli_print(cli, "[%d] socket fd %d", __LINE__, fd);
+	   ifr.ifr_addr.sa_family = AF_INET;
+	   strncpy(ifr.ifr_name , NETWORK_INTERFACE_NAME , ETH_DEV_NAME_LEN);
+
+	   if (0 == ioctl(fd, SIOCGIFHWADDR, &ifr)) {
+	 	  host_hw_addr = (unsigned char *)ifr.ifr_hwaddr.sa_data;
+	   }
+	   cli_print(cli, "[%d] host hw addr %.2X:%.2X:%.2X:%.2X:%.2X:%.2X", __LINE__, host_hw_addr[0], host_hw_addr[1], host_hw_addr[2], host_hw_addr[3], host_hw_addr[4], host_hw_addr[5]);
+
+	   (if_name[0] != '\0') ? (ifindex = if_nametoindex(if_name)) : (ifindex = if_nametoindex("eth0"));
+	   if (ifindex == 0) {
+	     perror("if_nametoindex");
+	     return ATLK_E_NOT_FOUND;
+	   }
+
+	   rv = close(fd);
+
+	   arg_addr = ether_aton(hw_addr);
+	   if (arg_addr == NULL) {
+	     fprintf(stderr, "Invalid MAC address: %s", hw_addr);
+	     return ATLK_E_INVALID_ARG;
+	   }
+
+	   memcpy(mac_addr.octets, arg_addr, EUI48_LEN);
+	   remote_addr_ll.sll_family = PF_PACKET;
+	   remote_addr_ll.sll_protocol = htons(ETH_P_ALL);
+	   remote_addr_ll.sll_ifindex = ifindex;
+	   remote_addr_ll.sll_halen = EUI48_LEN;
+	   memcpy(&remote_addr_ll.sll_addr[0], mac_addr.octets, EUI48_LEN);
+
+
+  
+
+	   local_addr.sll_family = PF_PACKET;
+	   local_addr.sll_protocol = htons(ETH_P_ALL);
+	   local_addr.sll_ifindex = ifindex;
+	   local_addr.sll_halen = 6;
+
+	   memcpy(&local_addr.sll_addr[0], &host_hw_addr[0], 6);
+
+	   socket_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL/*ETH_P_IP*/));
+
+	   cli_print(cli, "[%d] socket socket_fd %d", __LINE__, socket_fd);
+	   if (socket_fd == -1) {
+	     perror("socket");
+	     return 1;
+	   }
+
+	   /* Bind socket */
+	   rv = bind(socket_fd,
+	             (struct sockaddr *)&local_addr,
+	             sizeof(local_addr));
+
+	   if (rv == -1) {
+	     perror("bind");
+	     return 1;
+	   }
+
+	   context = socket_fd;
+
+	   dsm_device.device_name = SECTON_DEVICE_NAME;
+	   dsm_device.device_type = DSM_DEVICE_TYPE_CRATON2;
+	   memcpy(&sectonRemoteDevice.rdev_address, &mac_addr, EUI48_LEN);
+
+	   dsm_device.rdev_ptr = &sectonRemoteDevice;
+
+	   rc = dsm_device_register(&dsm_device, 1);
+  } else {
+	  ////////////////////////////////////////////////////////
+	  //////  local host CRATON2 registration   /////////////
+	  //////////////////////////////////////////////////////
+	  rv = ll_init(eth_dev_name);
+	  if (rv) {
+	    (void)fprintf(stderr, "socket_create failed: %d", rv);
+	    return EXIT_FAILURE;
+	  }
+	  dsm_device.device_name = SECTON_DEVICE_NAME;
+	  dsm_device.device_type = DSM_DEVICE_TYPE_CRATON2;
+	  dsm_device.rdev_ptr = ll_get();
+
+	  rc = dsm_device_register(&dsm_device, 1);
+
   }
-  cli_print(cli, "[%d] host hw addr %.2X:%.2X:%.2X:%.2X:%.2X:%.2X", __LINE__, host_hw_addr[0], host_hw_addr[1], host_hw_addr[2], host_hw_addr[3], host_hw_addr[4], host_hw_addr[5]);
 
-  (if_name[0] != '\0') ? (ifindex = if_nametoindex(if_name)) : (ifindex = if_nametoindex("eth0"));
-  if (ifindex == 0) {
-    perror("if_nametoindex");
-    return 1;
-  }
-  rv = close(fd);
-
-  arg_addr = ether_aton(hw_addr);
-  if (arg_addr == NULL) {
-    fprintf(stderr, "Invalid MAC address: %s", hw_addr);
-    return ATLK_E_INVALID_ARG;
-  }
-
-  memcpy(mac_addr.octets, arg_addr, EUI48_LEN);
-  remote_addr_ll.sll_family = PF_PACKET;
-  remote_addr_ll.sll_protocol = htons(ETH_P_ALL);
-  remote_addr_ll.sll_ifindex = ifindex;
-  remote_addr_ll.sll_halen = EUI48_LEN;
-  memcpy(&remote_addr_ll.sll_addr[0], mac_addr.octets, EUI48_LEN);
-
-
-
-
-  local_addr.sll_family = PF_PACKET;
-  local_addr.sll_protocol = htons(ETH_P_ALL);
-  local_addr.sll_ifindex = ifindex;
-  local_addr.sll_halen = 6;
-
-  memcpy(&local_addr.sll_addr[0], &host_hw_addr[0], 6);
-
-  socket_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL/*ETH_P_IP*/));
-
-  cli_print(cli, "[%d] socket socket_fd %d", __LINE__, socket_fd);
-  if (socket_fd == -1) {
-    perror("socket");
-    return 1;
-  }
-
-  /* Bind socket */
-  rv = bind(socket_fd,
-            (struct sockaddr *)&local_addr,
-            sizeof(local_addr));
-
-  if (rv == -1) {
-    perror("bind");
-    return 1;
-  }
-
-  context = socket_fd;
-
-  dsm_device.device_name = SECTON_DEVICE_NAME;
-  dsm_device.device_type = DSM_DEVICE_TYPE_SECTON;
-  memcpy(&sectonRemoteDevice.rdev_address, &mac_addr, EUI48_LEN);
-
-  dsm_device.rdev_ptr = &sectonRemoteDevice;
-
-  rc = dsm_device_register(&dsm_device, 1);
   if (atlk_error(rc)) {
 	  cli_print ( cli, "ERROR : Failed to register the device : %s", atlk_rc_to_str(rc));	  
 	  return atlk_error(rc);  
