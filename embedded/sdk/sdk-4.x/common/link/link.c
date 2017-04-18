@@ -514,6 +514,56 @@ int cli_v2x_set_link_socket_addr( struct cli_def *cli, const char *command, char
   return CLI_OK;
 }
 
+int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, char *argv[], int argc)
+{
+
+  v2x_dot4_channel_start_request_t request;
+  atlk_wait_t wait;
+  int i = 0;
+  atlk_rc_t      rc = ATLK_OK;
+  int32_t       if_index = 1;
+  int32_t       op_class = 1;
+  int32_t       chan_id  = 0;
+  int32_t		  slot_id  = 0;
+  int32_t		  imm_acc  = 0;
+
+
+  (void) command;
+
+
+  /* get user context */
+  //user_context *myctx = (user_context *) cli_get_context(cli);
+
+  IS_HELP_ARG("link dot4 ch_start [-if_index 1 2] [-op_class 0-4] [-chan_id see 1609.4] [-slot_id 1 2] [-imm_acc 0-255] ");
+
+  CHECK_NUM_ARGS /* make sure all parameter are there */
+
+
+
+	  for (i = 0; i < argc; i += 2) {
+	      GET_INT("-if_index", if_index, i, "RF index");
+	      GET_INT("-op_class", op_class, i, "operation class");
+	  	  GET_INT("-ch_id", chan_id, i, "Sets the channel number (band) to be used");
+	  	  GET_INT("-slot_id", slot_id, i, "Specify time slot to be used");
+	      GET_INT("-imm_acc", imm_acc, i, "Specify dot4 mode of operation - continues, immidiet, alternated value set TO by multiplying with full sync interval");
+	  }
+
+
+	  request.if_index = if_index;
+	  request.channel_id.op_class = op_class;
+	  request.channel_id.channel_num = chan_id;
+	  request.time_slot = slot_id;
+	  request.immediate_access = imm_acc;
+
+
+     rc = v2x_dot4_channel_start(v2x_service, &request, &wait);
+     if (rc != ATLK_OK) {
+    	 cli_print(cli, "ERROR : dot4 channel request : %s\n", atlk_rc_to_str(rc));
+    	 return CLI_ERROR;
+     }
+	 return CLI_OK;
+
+}
 
 int cli_test_v2x_link_dot4_channel_start( struct cli_def *cli, const char *command, char *argv[], int argc ) //chrub
 {

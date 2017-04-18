@@ -187,6 +187,9 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, c, "reset_cntrs", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
   cli_register_command(*cli, c, "print_cntrs", cli_v2x_link_print_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "print Internal link counters");
 
+  d = cli_register_command(*cli, c, "dot4", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set dot4 CS");
+	cli_register_command(*cli, d, "start_ch", cli_v2x_dot4_channel_start_req, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "send dot4 channel start request");
+
   d = cli_register_command(*cli, c, "api_test", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Api tests"); //chrub
 
   cli_register_command(*cli, d, "dot4_channel_start", cli_test_v2x_link_dot4_channel_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, " Send IEEE Std 1609.4-2016 service primitive MLMEX-CHSTART.request and receive MLMEX-CHSTART.confirm"); //chrub
