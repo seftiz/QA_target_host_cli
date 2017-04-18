@@ -1,10 +1,7 @@
 #export SDK_DIR := /mnt/share/sdk-4.11.1-alpha4-sc-i686-linux-gnu/
-<<<<<<< HEAD
-export SDK_DIR := /media/sf_fw_release/sdk-4.11.1-rc2-sc-i686-linux-gnu/
-=======
+
 export SDK_DIR := /media/sf_ATE_proj/sdk-4.11.1-rc2-sc-i686-linux-gnu/
 
->>>>>>> ae59499f12d1008bc1858004cc1b83d1afac34f7
 #export SDK_DIR := /docs/ATE/fw_releases/sdk-4.11.0-beta1-mc-i686-linux-gnu
 export COMMON := ../common
 export APPS := ../apps

@@ -89,14 +89,13 @@ int cli_v2x_link_service_create( struct cli_def *cli, const char *command, char 
   
   } 
   else if ( strcmp( (char*) str_data, "remote") == 0 ) {
-
 		
     /* Create the remote V2X service */
-    atlk_rc_t rc = v2x_remote_service_create( get_active_cli_transport(), NULL, &v2x_service);
+   /* atlk_rc_t rc = v2x_remote_service_create( get_active_cli_transport(), NULL, &v2x_service);
     if (atlk_error(rc)) {
       cli_print( cli, "Remote V2X service create: %s\n", atlk_rc_to_str(rc));
       return atlk_error(rc);
-    }
+    }*/
 
     cli_print( cli, "Remote V2X service is not avaliable" );
 		
@@ -285,6 +284,8 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
     GET_INT("-power_dbm8", link_sk_tx_param.power_dbm8, i, "Sets the mac interface to transmit from");
 
     GET_STRING("-dest_addr", str_data, i, "Set destination mac address"); 
+    GET_INT("-op_class", link_sk_tx_param.channel_id.op_class, i, "Specify operational class");
+    GET_INT("-ch_idx", link_sk_tx_param.channel_id.channel_num, i, "Sets the channel number (band) to be used");
   } 
   
   // Convert mac address xx:xx:xx:xx:xx:xx to array of bytes
@@ -327,6 +328,8 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
   }
 
   for (i = 0; i < num_frames; ++i) {
+     hex_arr[1] = i;
+     hex_arr[0] = (i & 0xff00)>>8;
     rc = v2x_send(myctx->v2x_socket, hex_arr, msg_size, &link_sk_tx_param, NULL);
     if ( atlk_error(rc) ) {
       cli_print(cli, "ERROR : v2x_send: %s\n", atlk_rc_to_str(rc));
@@ -830,7 +833,7 @@ int cli_test_v2x_link_service_get (struct cli_def *cli, const char *command, cha
 	CHECK_NUM_ARGS // make sure all parameter are there 
 	
  
-		rc = v2x_remote_service_create( get_active_cli_transport(), NULL, &v2x_service);
+	//	rc = v2x_remote_service_create( get_active_cli_transport(), NULL, &v2x_service);
 		if (atlk_error(rc)) {
 			cli_print( cli, "Remote V2X service create: %s\n", atlk_rc_to_str(rc));
 			return atlk_error(rc);

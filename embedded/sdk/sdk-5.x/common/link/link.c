@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <unistd.h>
+//#include </media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/v2x_service.h>
 #include <atlk/v2x_service.h>
 #include <atlk/v2x.h>
 
@@ -23,6 +24,12 @@
 
 #include "link.h"
 #include "../../linux/remote/remote.h"
+//#include ".././src/include/dbg.h"
+//#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/src/include/dbg_service.h"
+#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/wdm.h"
+#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/wdm_service.h"
+
+
 
 static v2x_service_t 						*v2x_service = NULL;
 
@@ -292,8 +299,8 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
       }
     }                                                   \
   }
-  if (v2x_service_ptr == NULL) {
-		rc = v2x_service_get(NULL, &v2x_service_ptr);
+  if (v2x_service == NULL) {
+		rc = v2x_service_get(NULL, &v2x_service);
     if (atlk_error(rc)) {
       fprintf(stderr, "v2x_service_get failed: %d\n", rc);
       return EXIT_FAILURE;
@@ -427,15 +434,27 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 	msg_size = (size_t) (strlen(tx_data) / 2);
 	cli_print(cli, "cli_v2x_link_tx - convert hexstr to buffer, msg_size = %d, strlen(tx_data) = %d\n", (int) msg_size, (int)strlen(tx_data) );
   rc = hexstr_to_bytes_arr(tx_data, strlen(tx_data), hex_arr, &msg_size);
+	//cli_print(cli, " rc = %d, data : %s, msg_size : %d, hex_arr : 0x%02x, hex_arr : 0x%02x, hex_arr : 0x%02x ,hex_arr : 0x%02x  ",rc, tx_data,(int)msg_size,hex_arr[0],hex_arr[1],hex_arr[2],hex_arr[3]);
   if (atlk_error(rc)) {
     cli_print(cli, "ERROR : cli_v2x_link_tx - cannot convert hexstr to buffer, error= %s\n", atlk_rc_to_str(rc));
     goto error;
   }
-
+  
   for (i = 0; i < num_frames; ++i) {
 	  	hex_arr[1] = i;
 	  	hex_arr[0] = (i & 0xff00)>>8;
 		rc = v2x_send(myctx->v2x_socket, hex_arr, msg_size, &link_sk_tx_param, NULL);
+		
+		int j = msg_size;
+		
+		cli_print(cli, "data :");
+
+		while (j){
+		j--;
+		
+		cli_print(cli, "%02x\n", hex_arr[j] );
+		}
+		
 		if ( atlk_error(rc) ) {
 			cli_print(cli, "ERROR : v2x_send: %s\n", atlk_rc_to_str(rc));
 			goto error;
@@ -450,6 +469,7 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 			}
 		}
 	}
+  
 error:
   return rc;
 }
@@ -623,6 +643,42 @@ int cli_v2x_set_link_socket_addr( struct cli_def *cli, const char *command, char
   return CLI_OK;
 }
 
+
+/*
+int cli_v2x_netif_profile_set( struct cli_def *cli, const char *command, char *argv[], int argc ) //chrub
+{
+	atlk_rc_t      rc = ATLK_OK;
+	
+  	user_context *myctx = (user_context *) cli_get_context(cli);
+	(void) command;
+	(void) argv;
+  	(void) argc;
+
+  v2x_netif_profile_t netif_profile = {
+    .if_index = myctx->if_idx,
+    .channel_id = V2X_CHANNEL_ID_INIT,
+    .datarate = V2X_DATARATE_6MBPS,
+    .power_dbm8 = -20
+  };
+
+  IS_HELP_ARG("link netif_profile set -datarate[] -power_dbm8[-20-20]");
+
+  CHECK_NUM_ARGS // make sure all parameter are there
+
+
+    for (int i = 0; i < argc; i += 2) {
+      GET_INT("-data_rate", netif_profile.datarate, i, "Specify the frame user priority, range 0:7");
+      GET_INT("-power_dbm8", netif_profile.power_dbm8 , i, "power dBm");
+    }
+
+  rc = v2x_netif_profile_set(v2x_service, 0, &netif_profile);
+  if (atlk_error(rc)) {
+    cli_print(cli, "v2x_netif_profile_set: %s\n", atlk_rc_to_str(rc));
+  }
+	return rc;
+
+} 
+*/
 
 
 

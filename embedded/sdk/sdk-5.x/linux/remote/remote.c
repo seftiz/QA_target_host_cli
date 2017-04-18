@@ -231,22 +231,22 @@ ddm_config_init(ddm_configure_t *config)
   }
 
   rc = read_file_contents(CODE_PATH,
-                          &config->code_buffer_ptr,
-                          &config->code_size);
+                          &config->binary_buffer_ptr,
+                          &config->binary_size);
   if (atlk_error(rc)) {
     return rc;
   }
 
   rc = read_file_contents(DATA_PATH,
-                          &config->data_buffer_ptr,
-                          &config->data_size);
+                          &config->binary_buffer_ptr,
+                          &config->binary_size);
   if (atlk_error(rc)) {
     return rc;
   }
 
   rc = read_file_contents(CACHE_PATH,
-                          &config->cache_buffer_ptr,
-                          &config->cache_size);
+                          &config->module_params_ptr,
+                          &config->module_params_size);
   if (atlk_error(rc)) {
     return rc;
   }
@@ -512,6 +512,7 @@ cli_service_register(struct cli_def *cli, const char *command, char *argv[], int
   cli_print ( cli,"service type - %d", dsm_service.service_type);
 
   rc = dsm_service_register(&dsm_service, 1);
+  cli_print ( cli,"dsm_service_register rc = %d",rc); //chrub
   if (atlk_error(rc)) {
 	  cli_print ( cli, "ERROR : Failed to register the service : %s", atlk_rc_to_str(rc));	  
 	  return atlk_error(rc);  
@@ -519,6 +520,7 @@ cli_service_register(struct cli_def *cli, const char *command, char *argv[], int
 
 
   rc = dsm_service_init(dsm_service.service_name, ATLK_FOREVER);
+  cli_print ( cli,"dsm_service_init rc = %d",rc); //chrub
     if (atlk_error(rc)) {
   	  cli_print ( cli, "ERROR : Failed to register the service : %s", atlk_rc_to_str(rc));
   	  return atlk_error(rc);

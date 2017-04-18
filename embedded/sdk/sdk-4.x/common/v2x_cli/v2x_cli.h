@@ -31,6 +31,8 @@
 #endif
 
 #ifdef __THREADX__
+#include <atlk/remote.h>
+#include <atlk/v2x_remote.h>
 #include <tx_api.h>
 #include <atlk/can_service.h>
 #include <craton/imq.h>
