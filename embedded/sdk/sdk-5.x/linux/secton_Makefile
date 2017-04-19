@@ -1,6 +1,6 @@
 # Autotalks SDK directory
-#ATLK_SDK_DIR := /docs/ATE/fw_releases/dbg-secton-sdk-5.2.0-beta3
-ATLK_SDK_DIR := /docs/ATE/fw_releases/craton2-sdk-5.3.0-alpha1
+ATLK_SDK_DIR := /docs/ATE/fw_releases/dbg-secton-sdk-5.3.0-alpha2
+#ATLK_SDK_DIR := /docs/ATE/fw_releases/craton2-sdk-5.3.0-alpha1
 
 COMMON := ../common
 APPS := ../apps
@@ -23,7 +23,8 @@ TARGET_APP := v2x_cli
 
 
 # Target source files
-TARGET_SRCS := libcli/libcli.c 
+TARGET_SRCS := libcli/libcli.c
+TARGET_SRCS += link_layer/*.c  
 TARGET_SRCS += $(APPS)/sniffer/sniffer.c
 TARGET_SRCS += $(COMMON)/v2x_cli/v2x_cli.c
 TARGET_SRCS += $(COMMON)/general/general.c
