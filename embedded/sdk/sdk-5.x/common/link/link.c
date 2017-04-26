@@ -659,7 +659,7 @@ int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, cha
   int32_t       chan_id  = 0;
   int32_t		  slot_id  = 0;
   int32_t		  imm_acc  = 0;
-
+wdm_service_t *wdm_service_ptr = NULL;
 
   (void) command;
 
@@ -695,6 +695,21 @@ int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, cha
 	  request.channel_id.time_slot = slot_id;
 	  request.immediate_access = imm_acc;
 
+ rc = wdm_service_get(NULL, &wdm_service_ptr);
+  if (atlk_error(rc)) {
+    (void)fprintf(stderr, "wdm_service_get failed: %d\n", rc);
+    return EXIT_FAILURE;
+  }
+
+ rc = wdm_interface_state_set(wdm_service_ptr,
+                                 0,
+                                 WDM_INTERFACE_STATE_ENABLED);
+    if(atlk_error(rc)) {
+      printf("Could not enable interface %d\n", 0);
+    }
+    else {
+      printf("Interface %d enabled\n", 0);
+    }
 
      rc = v2x_dot4_channel_start(v2x_service, &request, &wait);
      if (rc != ATLK_OK) {
@@ -709,6 +724,7 @@ int cli_v2x_dot4_channel_end_req(struct cli_def *cli, const char *command, char 
 {
 
 	v2x_dot4_channel_end_request_t request;
+wdm_service_t *wdm_service_ptr = NULL;
 	atlk_wait_t wait;
     int i = 0;
 	atlk_rc_t      rc = ATLK_OK;
@@ -739,7 +755,11 @@ int cli_v2x_dot4_channel_end_req(struct cli_def *cli, const char *command, char 
 	  request.channel_id.channel_num = ch_id;
 
 
-
+ rc = wdm_service_get(NULL, &wdm_service_ptr);
+  if (atlk_error(rc)) {
+    (void)fprintf(stderr, "wdm_service_get failed: %d\n", rc);
+    return EXIT_FAILURE;
+  }
      rc = v2x_dot4_channel_end(v2x_service, &request, &wait);
      if (rc != ATLK_OK) {
     	 cli_print(cli, "ERROR : v2x channel request : %s\n", atlk_rc_to_str(rc));
@@ -766,11 +786,8 @@ int cli_v2x_cmd_sdk_version(struct cli_def *cli,
   size_t sdk_version_size;
   ddm_service_t *ddm_service = 
     ((diag_cli_services_t *)cli_get_context(cli))->ddm_service_ptr;
-  wdm_service_t *wdm_service = 
-    ((diag_cli_services_t *)cli_get_context(cli))->wdm_service_ptr;
   char *sdk_ver = sdk_version;
   atlk_rc_t rc;
-  wdm_dsp_version_t dsp_version;
 
   sdk_version_size = sizeof(sdk_version);
   rc = ddm_version_get(ddm_service, sdk_version, &sdk_version_size);
@@ -793,20 +810,6 @@ int cli_v2x_cmd_sdk_version(struct cli_def *cli,
   
   sdk_ver = sdk_ver + strlen(sdk_version) + 1;
   cli_print(cli, "  Software version: %s", sdk_ver);
-
-  rc = wdm_dsp_version_get(wdm_service, &dsp_version);
-  if (atlk_error(rc)) {
-    cli_print(cli, "failed to get WDM DSP version rc=%d", rc);
-    return CLI_ERROR;
-  }
-
-  cli_print(cli, "DSP:");
-
-  cli_print(cli,
-            "  Software version: %"PRIu8".%"PRIu8".%"PRIu8,
-            dsp_version.major,
-            dsp_version.minor,
-            dsp_version.sw_revision);
 
   return CLI_OK;
 }
