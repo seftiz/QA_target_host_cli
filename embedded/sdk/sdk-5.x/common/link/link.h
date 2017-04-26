@@ -3,9 +3,8 @@
 
 
 #include "../../linux/libcli/libcli.h"
-#include ".././src/include/dbg.h"
+//#include ".././src/include/dbg.h"
 #include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/wdm.h"
-
 int cli_v2x_cmd_sdk_version( struct cli_def *cli, const char *command, char *argv[], int argc );
 
 int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *argv[], int argc );
@@ -32,5 +31,7 @@ int cli_v2x_wave6_tx(struct cli_def *cli, const char *command, char *argv[], int
 
 atlk_rc_t diag_wlan_stat(wdm_service_t *wdm_service, int32_t wlan_if_index, wdm_stats_t *wlan_stat);
 //int cli_v2x_netif_profile_set( struct cli_def *cli, const char *command, char *argv[], int argc ); //chrub
+
+int cli_v2x_cmd_sdk_version(struct cli_def *cli, const char *command, char *argv[], int argc);
 
 #endif /* __ATE_V2X_CLI_LINK_H__ */
