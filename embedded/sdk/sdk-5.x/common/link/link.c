@@ -480,15 +480,15 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 	  	hex_arr[0] = (i & 0xff00)>>8;
 		rc = v2x_send(myctx->v2x_socket, hex_arr, msg_size, &link_sk_tx_param, NULL);
 		
-		int j = msg_size;
+		//int j = msg_size;
 		
-		cli_print(cli, "data :");
+		//cli_print(cli, "data :");
 
-		while (j){
-		j--;
+		//while (j){
+		//j--;
 		
-		cli_print(cli, "%02x\n", hex_arr[j] );
-		}
+		//cli_print(cli, "%02x\n", hex_arr[j] );
+		//}
 		
 		if ( atlk_error(rc) ) {
 			cli_print(cli, "ERROR : v2x_send: %s\n", atlk_rc_to_str(rc));
