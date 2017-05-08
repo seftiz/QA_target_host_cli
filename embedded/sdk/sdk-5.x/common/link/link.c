@@ -25,6 +25,8 @@
 
 #include "link.h"
 #include "../../linux/remote/remote.h"
+#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
+#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm_service.h"
 
 //trying
 typedef struct {
@@ -36,6 +38,7 @@ typedef struct {
 //till here
 
 static v2x_service_t 						*v2x_service = NULL;
+static wdm_service_t                                            *wdm_service_ptr = NULL;
 // /* End indication thread */
 // /* thread priority */
 // #ifdef __THREADX__
@@ -239,7 +242,7 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
   int32_t               i     = 0;
   atlk_rc_t             rc    = ATLK_OK;
   char                  str_data[256] = "";
-
+  size_t index;
   /* get user context */
   user_context *myctx = (user_context *) cli_get_context(cli);
   (void) command;
@@ -250,6 +253,24 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
 
   CHECK_NUM_ARGS /* make sure all parameter are there */
   
+rc = wdm_service_get(NULL, &wdm_service_ptr);
+    if (atlk_error(rc)) {
+      cli_print( cli, "ERROR :wdm_service_get fiailed: %s\n", atlk_rc_to_str(rc));
+      return EXIT_FAILURE;
+    }
+   cli_print( cli, "wdm_service: %p",wdm_service_ptr);
+ /* Enable WDM interfaces */
+  for (index = 0; index < 2; index++) {
+    rc = wdm_interface_state_set(wdm_service_ptr,
+                                 index,
+                                 WDM_INTERFACE_STATE_ENABLED);
+    if(atlk_error(rc)) {
+      printf("Could not enable interface %zu\n", index);
+    }
+    else {
+      printf("Interface %zu enabled\n", index);
+    }
+  }
 
  // get v2x service
   
@@ -300,7 +321,7 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
       else { 
         cli_print( cli, "ERROR : Processed parameter %s, value %x failed" , "-protocol_id" , value );
       }
-    }                                                   \
+    }                                                   
   }
   if (v2x_service == NULL) {
 		rc = v2x_service_get(NULL, &v2x_service);
@@ -429,13 +450,6 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 		}
 		memset( tx_data, 70, payload_len); /* FF */
   }
-//nomiro add:
-  else if (strcmp(tx_data,"Dot4") == 0){
-	cli_print(cli, "In dot4 mode\n");
-	//erer will be some dev	
-  }
-
-//until here	
 	/*handle special case to support CHS TCs*/
   if ((strcmp(tx_data, "CHS") == 0) && (payload_len > 0)){
 	  memset((char *)tx_data, 0, sizeof(tx_data));
@@ -479,7 +493,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
   atlk_rc_t      rc = ATLK_OK;
 
   /* Received LINK descriptor */
-	v2x_receive_params_t 	link_sk_rx = V2X_RECEIVE_PARAMS_INIT;
+	v2x_receive_params_t 	link_sk_rx;// = V2X_RECEIVE_PARAMS_INIT;
   int32_t         			frames   		= 1,
 												i        		= 0,
 												cycle_timeout  		= 5000,
@@ -531,7 +545,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 		    }
 
 			rc = v2x_receive(myctx->v2x_socket, buf, &size, &link_sk_rx, NULL);
-			if ( (rc == ATLK_E_TIMEOUT) || (rc == ATLK_E_NOT_READY)) {
+			if ( (rc == ATLK_E_TIMEOUT) || (rc == ATLK_E_NOT_READY)||(rc == ATLK_E_EMPTY)) {
 				gettimeofday (&current, NULL);	
 				double elapsedTime = (current.tv_sec - start.tv_sec) * 1000.0;
 				if ( (elapsedTime > cycle_timeout) && (rc != ATLK_E_NOT_READY)) {
@@ -563,7 +577,6 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 		m_link_rx_packets ++;
 		
 		if ( print_frms ) { 
-		
 			int j = 0;
 			const char *msg = buf;
 			char* buf_str = (char*) malloc (2 * size + 1);
@@ -574,8 +587,15 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 			}
 			
 			*(buf_ptr + 1) = '\0';
+			//added for chs tests
+				if (link_sk_rx.channel_id.channel_num != 0){
+				cli_print( cli,   "Frame: %d, ch_num: %d, time_slot: %d  timestamp: %" PRIu64 "\n",
+				 (int) ++i,link_sk_rx.channel_id.channel_num ,link_sk_rx.channel_id.time_slot,link_sk_rx.receive_time_us);
 			
-			cli_print( cli,   "Frame: %d, SA : %02x:%02x:%02x:%02x:%02x:%02x, DA : %02x:%02x:%02x:%02x:%02x:%02x\r\nData %s\r\n" /*Power : %.2f\r\n"*/,
+				}
+			//till here
+
+		cli_print( cli,   "Frame: %d, SA : %02x:%02x:%02x:%02x:%02x:%02x, DA : %02x:%02x:%02x:%02x:%02x:%02x\r\nData %s\r\n" /*Power : %.2f\r\n"*/,
 				 (int) ++i,
 				 /* SA */
 				 link_sk_rx.source_address.octets[0], link_sk_rx.source_address.octets[1],
@@ -651,7 +671,7 @@ int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, cha
 {
 
   v2x_dot4_channel_start_request_t request;
-  atlk_wait_t wait;
+ // atlk_wait_t wait;
   int i = 0;
   atlk_rc_t      rc = ATLK_OK;
   int32_t       if_index = 1;
@@ -711,7 +731,7 @@ wdm_service_t *wdm_service_ptr = NULL;
       printf("Interface %d enabled\n", 0);
     }
 
-     rc = v2x_dot4_channel_start(v2x_service, &request, &wait);
+     rc = v2x_dot4_channel_start(v2x_service, &request, &atlk_wait_forever);
      if (rc != ATLK_OK) {
     	 cli_print(cli, "ERROR : dot4 channel request : %s\n", atlk_rc_to_str(rc));
     	 return CLI_ERROR;
@@ -1146,9 +1166,26 @@ int cli_v2x_wave6_rx(struct cli_def *cli, const char *command, char *argv[], int
     if (elapsed_from_session_start > timeout) {
 		cli_print(cli, "ERROR : rx session timed out:");
 		goto error;
+    }
+
+    /* Print length and first bytes of received packet */
+    if (udp_packet->nx_packet_prepend_ptr[udp_packet->nx_packet_length - 1]
+        != '\0') {
+    	cli_print(cli, "Received a bad message (not zero-terminated)");
+    }
+/*
+    else {
+    	cli_print(cli, "Received message: \"%s\"", udp_packet->nx_packet_prepend_ptr);
+    }
+*/
+
+    /* Release the packet */
+    nx_packet_release(udp_packet);
+  }
   error:
-  nx_udp_socket_unbind(&udp_socket);
-  nx_udp_socket_delete(&udp_socket);
-  return rc;
+    nx_udp_socket_unbind(&udp_socket);
+    nx_udp_socket_delete(&udp_socket);
+    return atlk_error(rc);
+
 }
 #endif
