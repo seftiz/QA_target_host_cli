@@ -1,0 +1,1376 @@
+diff --git a/embedded/sdk/sdk-4.x/Makefile b/embedded/sdk/sdk-4.x/Makefile
+index 1503eae..40e3ee9 100644
+--- a/embedded/sdk/sdk-4.x/Makefile
++++ b/embedded/sdk/sdk-4.x/Makefile
+@@ -1,10 +1,7 @@
+ #export SDK_DIR := /mnt/share/sdk-4.11.1-alpha4-sc-i686-linux-gnu/
+-<<<<<<< HEAD
+-export SDK_DIR := /media/sf_fw_release/sdk-4.11.1-rc2-sc-i686-linux-gnu/
+-=======
++
+ export SDK_DIR := /media/sf_ATE_proj/sdk-4.11.1-rc2-sc-i686-linux-gnu/
+ 
+->>>>>>> ae59499f12d1008bc1858004cc1b83d1afac34f7
+ #export SDK_DIR := /docs/ATE/fw_releases/sdk-4.11.0-beta1-mc-i686-linux-gnu
+ export COMMON := ../common
+ export APPS := ../apps
+diff --git a/embedded/sdk/sdk-4.x/apps/sniffer/sniffer.c b/embedded/sdk/sdk-4.x/apps/sniffer/sniffer.c
+index d722afd..d3769df 100644
+--- a/embedded/sdk/sdk-4.x/apps/sniffer/sniffer.c
++++ b/embedded/sdk/sdk-4.x/apps/sniffer/sniffer.c
+@@ -1,202 +1,418 @@
+-
+-#include "../../common/v2x_cli/v2x_cli.h"
+-
+-#include <stdio.h>
+-#include <assert.h>
+-#include <inttypes.h>
+-#include <unistd.h>
+-
+-#include <atlk/sdk.h>
+-#include <nxd_bsd.h>
+-
+-#include <tx_api.h>
+-#include <nx_api.h>
+-
+-#include <craton/net.h>
+-
+-#include <craton/wlan_driver.h>
+-
+-int						hwd											=	0, if_idx = -1;
+-struct				sockaddr_in destAddr;
+-
+-
+-#define MAX_MSG_SIZE 1518
+-
+-#define packed __attribute__((packed))
+-
+-
+-typedef struct packed {
+-
+-	/* PCAP frame header */
+-	uint32_t 	ts_sec;
+-	uint32_t 	ts_usec;
+-	uint32_t 	incl_len;
+-	uint32_t 	orig_len;
+-
+-} pcacp_header_st;
+-
+-enum ieee80211_radiotap_type {
+-    IEEE80211_RADIOTAP_TSFT = 0,
+-    IEEE80211_RADIOTAP_FLAGS = 1,
+-    IEEE80211_RADIOTAP_RATE = 2,
+-    IEEE80211_RADIOTAP_CHANNEL = 3,
+-    IEEE80211_RADIOTAP_FHSS = 4,
+-    IEEE80211_RADIOTAP_DBM_ANTSIGNAL = 5,
+-    IEEE80211_RADIOTAP_DBM_ANTNOISE = 6,
+-    IEEE80211_RADIOTAP_LOCK_QUALITY = 7,
+-    IEEE80211_RADIOTAP_TX_ATTENUATION = 8,
+-    IEEE80211_RADIOTAP_DB_TX_ATTENUATION = 9,
+-    IEEE80211_RADIOTAP_DBM_TX_POWER = 10,
+-    IEEE80211_RADIOTAP_ANTENNA = 11,
+-    IEEE80211_RADIOTAP_DB_ANTSIGNAL = 12,
+-    IEEE80211_RADIOTAP_DB_ANTNOISE = 13,
+-    IEEE80211_RADIOTAP_FCS = 14,
+-    IEEE80211_RADIOTAP_XCHANNEL = 18,
+-    IEEE80211_RADIOTAP_EXT = 31
+-};
+-
+-typedef struct packed {
+-	
+-        uint8_t       it_version;     /* set to 0 */
+-        uint8_t       it_pad;
+-        uint16_t      it_len;         /* entire length */
+-        uint32_t      it_present;     /* fields present */
+-
+-				uint64_t 			mac_timestamp;
+-     		uint8_t 			data_rate;
+-     		uint8_t 			antenna;
+-    		uint8_t 			tx_power;
+-				
+-} radiotap_header_st;
+-
+-
+-/* Registered rx traffic monitor handler */
+-static void rx_traffic_monitor_handler(const wlan_frame_t *frame, const wlan_rx_frame_info_t *info)
+-{
+-	char					msg[MAX_MSG_SIZE];
+-	radiotap_header_st		radio_tap_hdr;
+-	char 					*pos = NULL;
+-	int						rc = 0;
+-
+-	if ( (frame->frame_body_size + frame->frame_header_size + sizeof(radio_tap_hdr) ) > (MAX_MSG_SIZE - 124) ) {
+-		printf ( "NOTE : Oversize frame, handle it later since its not shuld be common\n");
+-		return;
+-	}
+-
+-	/* Build radio tamp header frame */
+-	radio_tap_hdr.it_version = 0;
+-	radio_tap_hdr.it_pad = 0;
+-	radio_tap_hdr.it_len = sizeof(radiotap_header_st);
+-	radio_tap_hdr.it_present = ( (1<<IEEE80211_RADIOTAP_TSFT) | (1<<IEEE80211_RADIOTAP_RATE) | (1<<IEEE80211_RADIOTAP_DBM_TX_POWER) | (1<<IEEE80211_RADIOTAP_ANTENNA) );
+-	radio_tap_hdr.mac_timestamp = info->rx_time_us;
+-	radio_tap_hdr.data_rate = info->datarate;
+-	radio_tap_hdr.tx_power = info->power_dbm8;
+-		radio_tap_hdr.antenna = info->device_id;
+-		
+-	pos = msg;
+-	memcpy( pos , &radio_tap_hdr, sizeof(radio_tap_hdr) ); pos += sizeof(radio_tap_hdr);
+-	memcpy( pos, frame->frame_header_ptr, frame->frame_header_size ); pos += frame->frame_header_size;
+-	memcpy( pos, frame->frame_body_ptr, frame->frame_body_size ); pos += frame->frame_body_size;
+-		
+-	rc = sendto(hwd, msg, (pos - msg), 0, (struct sockaddr *)&destAddr, sizeof(destAddr));
+-	if ( rc < 1 ) {
+-		printf("ERROR : failed to send frame rc %d, size %d\n", rc, (int) (pos - msg) );
+-	}
+-}
+-
+-int cli_qa_sniffer_start( struct cli_def *cli, const char *command, char *argv[], int argc ) 
+-{
+-  int32_t               i     				= 0;
+-  atlk_rc_t             rc    				= ATLK_OK;
+-	int										rv						= 0;
+-	char									server_ip[20] = {0};
+-	int										server_port 	= 8030;
+-	int										udp_port			= 0;
+-	struct sockaddr_in		_sockaddr_in;
+-
+-  /* get user context */
+-  // user_context *myctx = (user_context *) cli_get_context(cli);
+-  (void) command;
+-  
+-  IS_HELP_ARG("sniffer start -if_idx 1|2 -server_ip 10.10.1.131 [-server_port 8030")
+-
+-  CHECK_NUM_ARGS /* make sure all parameter are there */
+-  
+-  GET_INT("-if_idx", if_idx, i, "Specify interface index");
+-  if ( if_idx < 1 || if_idx > 2) {
+-    cli_print(cli, "ERROR : if_index is not optional and must be in range of 1-2");
+-    return CLI_ERROR;
+-  }
+-
+-	for (i = 0; i < argc; i += 2) {
+-		GET_TYPE_INT("-server_port", server_port, unsigned int, i, "Local udp port number", "%u");
+-    GET_STRING("-server_ip", server_ip, i, "Set destination mac address");
+-	}
+-  
+-	/* Create socket */
+-	hwd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+-	if (hwd == -1) {
+-		cli_print(cli, "ERROR : failed to create udp socket");
+-		return CLI_ERROR;
+-	}
+-	
+-	/* Specify the address family */
+-	destAddr.sin_family = AF_INET;
+-	/* Specify the destination port */
+-	destAddr.sin_port = htons(server_port);
+-	/* Specify the destination IP address */
+-	destAddr.sin_addr.s_addr = inet_addr(server_ip);
+-
+-	/* Bind socket */
+-	memset(&_sockaddr_in, 0, sizeof(_sockaddr_in));
+-	_sockaddr_in.sin_family = AF_INET;
+-	_sockaddr_in.sin_port = htons(udp_port);
+-	_sockaddr_in.sin_addr.s_addr = INADDR_ANY;
+-	rv = bind(hwd, (struct sockaddr *)&_sockaddr_in, sizeof(_sockaddr_in));
+-	if (rv == -1) {
+-		cli_print(cli, "ERROR : failed to bind udp socket");
+-		return CLI_ERROR;
+-	}
+-	
+-	cli_print(cli, "NOTE : Sniffer on i %d started, server %s:%d", if_idx, server_ip, server_port);
+-
+-	/* Register a callback for WLAN device */
+-	rc = wlan_rx_traffic_monitor_set( (if_idx-1), rx_traffic_monitor_handler);
+-	if (atlk_error(rc)) {
+-		cli_print(cli, "wlan_rx_traffic_monitor_set: %s\n", atlk_rc_to_str(rc) );
+-		goto error;
+-	}
+-	
+-	return CLI_OK;
+-	
+-error:
+-  return atlk_error(rc);
+-}
+-
+-
+-int cli_qa_sniffer_stop( struct cli_def *cli, const char *command, char *argv[], int argc ) 
+-{
+-  atlk_rc_t             rc    				= ATLK_OK;
+-
+-
+-	(void) command;
+-	(void) argv;
+-	(void) argc;
+-  
+-  IS_HELP_ARG("sniffer stop")
+-
+-	soc_close(hwd);
+- 
+-	/* Register a callback for WLAN device */
+-	rc = wlan_rx_traffic_monitor_set( (if_idx-1), NULL);
+-	if (atlk_error(rc)) {
+-	 cli_print(cli, "wlan_traffic_monitor_set: %s\n", atlk_rc_to_str(rc) );
+-	 goto error;
+-	}
+-	 
+-	 return CLI_OK;
+-	 
+- error:
+-	 return atlk_error(rc);
+-}
+- 
++#ifdef __THREADX__
++#include "../../common/v2x_cli/v2x_cli.h"
++
++#include <stdio.h>
++#include <assert.h>
++#include <inttypes.h>
++#include <unistd.h>
++
++#include <atlk/sdk.h>
++#include <nxd_bsd.h>
++
++#include <tx_api.h>
++#include <nx_api.h>
++
++#include <craton/net.h>
++
++#include <craton/wlan_driver.h>
++#include "sniffer.h"
++//#include "../common/counters.h"
++
++#define TX 0 
++#define RX 1
++int				hwd[2]=	{0,0};
++
++struct sockaddr_in 		destAddr[2];
++
++int				sniffer_id = -1;
++
++
++
++
++#define MAX_MSG_SIZE 1518
++
++//static tx_rx_counters_t	counters[2] = {0};
++
++#define MAX_MSG_SIZE 1518
++#define ALL_RF_IF 2
++#define packed __attribute__((packed))
++
++
++typedef struct packed {
++
++	/* PCAP frame header */
++	uint32_t 	ts_sec;
++	uint32_t 	ts_usec;
++	uint32_t 	incl_len;
++	uint32_t 	orig_len;
++
++} pcacp_header_st;
++
++enum ieee80211_radiotap_type {
++  IEEE80211_RADIOTAP_TSFT = 0,
++  IEEE80211_RADIOTAP_FLAGS = 1,
++  IEEE80211_RADIOTAP_RATE = 2,
++  IEEE80211_RADIOTAP_CHANNEL = 3,
++  IEEE80211_RADIOTAP_FHSS = 4,
++  IEEE80211_RADIOTAP_DBM_ANTSIGNAL = 5,
++  IEEE80211_RADIOTAP_DBM_ANTNOISE = 6,
++  IEEE80211_RADIOTAP_LOCK_QUALITY = 7,
++  IEEE80211_RADIOTAP_TX_ATTENUATION = 8,
++  IEEE80211_RADIOTAP_DB_TX_ATTENUATION = 9,
++  IEEE80211_RADIOTAP_DBM_TX_POWER = 10,
++  IEEE80211_RADIOTAP_ANTENNA = 11,
++  IEEE80211_RADIOTAP_DB_ANTSIGNAL = 12,
++  IEEE80211_RADIOTAP_DB_ANTNOISE = 13,
++  IEEE80211_RADIOTAP_FCS = 14,
++  IEEE80211_RADIOTAP_XCHANNEL = 18,
++  IEEE80211_RADIOTAP_EXT = 31
++};
++
++
++// enum ieee80211_radiotap_type {
++  // IEEE80211_RADIOTAP_TSFT = 0,
++  // IEEE80211_RADIOTAP_FLAGS = 1,
++  // IEEE80211_RADIOTAP_RATE = 2,
++  // IEEE80211_RADIOTAP_CHANNEL = 3,
++  // IEEE80211_RADIOTAP_FHSS = 4,
++  // IEEE80211_RADIOTAP_DBM_ANTSIGNAL = 5,
++  // IEEE80211_RADIOTAP_DBM_ANTNOISE = 6,
++  // IEEE80211_RADIOTAP_LOCK_QUALITY = 7,
++  // IEEE80211_RADIOTAP_TX_ATTENUATION = 8,
++  // IEEE80211_RADIOTAP_DB_TX_ATTENUATION = 9,
++  // IEEE80211_RADIOTAP_DBM_TX_POWER = 10,
++  // IEEE80211_RADIOTAP_ANTENNA = 11,
++  // IEEE80211_RADIOTAP_DB_ANTSIGNAL = 12,
++  // IEEE80211_RADIOTAP_DB_ANTNOISE = 13,
++  // IEEE80211_RADIOTAP_RX_FLAGS = 14,
++  // IEEE80211_RADIOTAP_TX_FLAGS = 15,
++  // IEEE80211_RADIOTAP_RTS_RETRIES = 16,
++  // IEEE80211_RADIOTAP_DATA_RETRIES = 17,
++  // IEEE80211_RADIOTAP_EXT = 31
++
++// };
++
++
++typedef struct packed {
++	
++	uint8_t       it_version;     /* set to 0 */
++	uint8_t       it_pad;
++	uint16_t      it_len;         /* entire length */
++	uint32_t      it_present;     /* fields present */
++
++	uint64_t 			mac_timestamp;
++	uint8_t 			data_rate;
++	uint8_t 			tx_power;
++	uint8_t 			antenna;
++	// uint8_t             ch_num;
++	// uint8_t             op_class;
++} radiotap_header_st;
++
++
++/* Registered rx traffic monitor handler */
++static void rx_traffic_monitor_handler(const wlan_frame_t *frame, const wlan_rx_frame_info_t *info)
++{
++	char					msg[MAX_MSG_SIZE], *pos = NULL;
++		radiotap_header_st		radio_tap_hdr;
++		int										rc = 0;
++		if ( (frame->frame_body_size + frame->frame_header_size + sizeof(radio_tap_hdr) ) > (MAX_MSG_SIZE - 124) ) {
++			printf ( "NOTE : Oversize frame, handle it later since its not shuld be common\n");
++			return;
++		}
++
++		/* Build radio tamp header frame */
++		radio_tap_hdr.it_version = 0;
++		radio_tap_hdr.it_pad = 0;
++		radio_tap_hdr.it_len = sizeof(radiotap_header_st);
++	radio_tap_hdr.it_present = ( (1<<IEEE80211_RADIOTAP_TSFT) | (1<<IEEE80211_RADIOTAP_RATE)  | (1<<IEEE80211_RADIOTAP_DBM_TX_POWER) | (1<<IEEE80211_RADIOTAP_ANTENNA) );
++		radio_tap_hdr.mac_timestamp = info->rx_isr_time_us;
++		radio_tap_hdr.data_rate = info->datarate;
++		radio_tap_hdr.tx_power = info->power_dbm8;
++		radio_tap_hdr.antenna = info->device_id  & 0x0f;
++    // radio_tap_hdr.ch_num = info->v2x_channel_id.channel_num;
++    // radio_tap_hdr.op_class = info->v2x_channel_id.op_class;
++	if (sniffer_id != -1)
++		radio_tap_hdr.antenna |= ((sniffer_id<<4) & 0xf0);
++
++	pos = msg;
++
++
++	memcpy( pos , &radio_tap_hdr, sizeof(radio_tap_hdr) ); pos += sizeof(radio_tap_hdr);
++	memcpy( pos, frame->frame_header_ptr, frame->frame_header_size ); pos += frame->frame_header_size;
++	memcpy( pos, frame->frame_body_ptr, frame->frame_body_size ); pos += frame->frame_body_size;
++	if (hwd[RX] != 0)
++		rc = sendto(hwd[RX], msg, (pos - msg), 0, (struct sockaddr *)&destAddr[RX], sizeof(destAddr[RX]));
++	
++	if ( rc < 1 ) {
++		printf("ERROR : failed to send frame rc %d, size %d, hwd[RX] %d\n", rc, (int) (pos - msg),  (int)hwd[RX]);
++	}
++	//counters[info->device_id].rx.pass++;
++	
++}
++
++
++static void tx_traffic_monitor_handler(const wlan_frame_t *frame, const wlan_tx_frame_info_t *info)
++{
++	char					msg[MAX_MSG_SIZE], *pos = NULL;
++		radiotap_header_st		radio_tap_hdr;
++		int										rc = 0;
++		if ( (frame->frame_body_size + frame->frame_header_size + sizeof(radio_tap_hdr) ) > (MAX_MSG_SIZE - 124) ) {
++			printf ( "NOTE : Oversize frame, handle it later since its not shuld be common\n");
++			return;
++		}
++
++		/* Build radio tamp header frame */
++		radio_tap_hdr.it_version = 0;
++		radio_tap_hdr.it_pad = 0;
++		radio_tap_hdr.it_len = sizeof(radiotap_header_st);
++		radio_tap_hdr.it_present = ( (1<<IEEE80211_RADIOTAP_TSFT) | (1<<IEEE80211_RADIOTAP_RATE)  | (1<<IEEE80211_RADIOTAP_DBM_TX_POWER) | (1<<IEEE80211_RADIOTAP_ANTENNA) );
++		radio_tap_hdr.mac_timestamp = info->tx_isr_time_us;
++		radio_tap_hdr.data_rate = info->datarate;
++		radio_tap_hdr.tx_power = info->power_dbm8;
++		radio_tap_hdr.antenna = info->device_id  & 0x0f;
++	    if (sniffer_id != -1)
++		  radio_tap_hdr.antenna |= ((sniffer_id<<4) & 0xf0);
++		pos = msg;
++
++
++		memcpy( pos , &radio_tap_hdr, sizeof(radio_tap_hdr) ); pos += sizeof(radio_tap_hdr);
++		memcpy( pos, frame->frame_header_ptr, frame->frame_header_size ); pos += frame->frame_header_size;
++		memcpy( pos, frame->frame_body_ptr, frame->frame_body_size ); pos += frame->frame_body_size;
++
++        if (hwd[TX] != 0)
++		  rc = sendto(hwd[TX], msg, (pos - msg), 0, (struct sockaddr *)&destAddr[TX], sizeof(destAddr[TX]));
++	    if ( rc < 1 ) {
++		  printf("ERROR : failed to send frame rc %d, size %d, hwd[TX] %d\n", rc, (int) (pos - msg), (int)hwd[TX] );
++	    }
++		//counters[info->device_id].rx.pass++;
++	
++}
++
++
++
++//int cli_qa_sniffer_print_counters( struct cli_def *cli, const char *command, char *argv[], int argc ) 
++//{
++//	int			if_idx  = 0;
++//	
++//	(void) command;
++//
++  //IS_HELP_ARG("sniffer start -if_idx 1|2")
++//	CHECK_NUM_ARGS /* make sure all parameter are there */
++//	 
++//	GET_INT("-if_idx", if_idx, 0, "Specify interface index");
++//	if ( if_idx < 1 || if_idx > 3) {
++//	 cli_print(cli, "ERROR : if_index is not optional and must be in range of 1,2 or 3 to set both rf_if immidiatly");
++//	 return CLI_ERROR;
++//	}
++//
++//	cli_print( cli, "Interface : %d", if_idx);
++//	cli_print( cli, "RX : %d", counters[if_idx].rx.pass);
++//
++//	return CLI_OK;
++//
++//}
++
++
++//int cli_qa_sniffer_reset_counters( struct cli_def *cli, const char *command, char *argv[], int argc ) 
++//{
++//	int			if_idx  = 0;
++//	
++//	(void) command;
++//
++  //IS_HELP_ARG("sniffer start -if_idx 1|2")
++//	CHECK_NUM_ARGS /* make sure all parameter are there */
++//	 
++//	GET_INT("-if_idx", if_idx, 0, "Specify interface index");
++//	if ( if_idx < 1 || if_idx > 3) {
++//	 cli_print(cli, "ERROR : if_index is not optional and must be in range of 1,2 or 3 to set both rf_if immidiatly");
++//	 return CLI_ERROR;
++//	}
++//	
++//	memset( &counters[if_idx], 0 , sizeof(tx_rx_counters_t) );
++//
++//	return CLI_OK;
++//
++//}
++
++int cli_qa_sniffer_start( struct cli_def *cli, const char *command, char *argv[], int argc ) 
++{
++  int32_t               i     				= 0;
++  atlk_rc_t             rc    				= ATLK_OK;
++	int										rv						= 0;
++	char									server_ip[20] = {0};
++	int										server_port 	= 8030;
++	int										udp_port			= 0;
++	struct sockaddr_in		_sockaddr_in;
++	int										if_idx				= -1;
++	char                                    sniffer_type[3] = {0};
++
++  /* get user context */
++  // user_context *myctx = (user_context *) cli_get_context(cli);
++  (void) command;
++  
++  IS_HELP_ARG("sniffer start -if_idx 1|2|3 (3 - both 1 and 2 simultanously) -server_ip 10.10.1.131 [-server_port 8030] -sniffer_type TX|RX (in any case all rf_idx frames will be redirect to the first configured port...)")
++
++  CHECK_NUM_ARGS /* make sure all parameter are there */
++  
++	GET_INT("-if_idx", if_idx, i, "Specify interface index");
++	if ( if_idx < 1 || if_idx > 3) {
++	  cli_print(cli, "ERROR : if_index is not optional and must be in range of 1,2 or 3 to set both rf_if immidiatly");
++	  return CLI_ERROR;
++	}
++
++	for (i = 0; i < argc; i += 2) {
++		GET_TYPE_INT("-server_port", server_port, unsigned int, i, "Local udp port number", "%u");
++    GET_STRING("-server_ip", server_ip, i, "Set destination mac address");
++    GET_STRING("-sniffer_type", sniffer_type, i, "set which CB to register TX or RX monitor");
++	}
++	
++	cli_print(cli, "NOTE : no socket handle found - creating new socket...");
++
++	/* Create socket */
++	int rxtx = (strstr(sniffer_type, "RX") != NULL) ? RX : TX;
++
++	if (hwd[rxtx] == 0){
++	  hwd[rxtx] = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
++	  if (hwd[rxtx] == -1) {
++		  cli_print(cli, "ERROR : failed to create udp socket");
++		  return CLI_ERROR;
++	  }
++
++	  /* Specify the address family */
++	  destAddr[rxtx].sin_family = AF_INET;
++	  /* Specify the destination port */
++	  destAddr[rxtx].sin_port = htons(server_port);
++	  /* Specify the destination IP address */
++	  destAddr[rxtx].sin_addr.s_addr = inet_addr(server_ip);
++	  	/* Bind socket */
++	  memset(&_sockaddr_in, 0, sizeof(_sockaddr_in));
++	  _sockaddr_in.sin_family = AF_INET;
++	  _sockaddr_in.sin_port = htons(udp_port);
++	  _sockaddr_in.sin_addr.s_addr = INADDR_ANY;
++	  rv = bind(hwd[rxtx], (struct sockaddr *)&_sockaddr_in, sizeof(_sockaddr_in));
++	  if (rv == -1) {
++		  cli_print(cli, "ERROR : failed to bind udp socket");
++		  return CLI_ERROR;
++	  }
++	}
++	
++
++
++	if (if_idx == 3){
++		
++		for ( int i = 0; i < 1; i++ ) {
++			
++			//memset( &counters[i], 0 , sizeof(tx_rx_counters_t) );
++			if ((strstr(sniffer_type, "RX") != NULL) || (sniffer_type[0] == '\0')) {
++				cli_print(cli, "wlan_traffic_monitor_set to RX");
++				rc = wlan_rx_traffic_monitor_set( i, rx_traffic_monitor_handler);
++			}
++			if ((strstr(sniffer_type, "TX") != NULL) || (sniffer_type[0] == '\0')) {
++				cli_print(cli, "wlan_traffic_monitor_set to TX");
++				rc = wlan_tx_traffic_monitor_set( i, tx_traffic_monitor_handler);
++			}
++			if (atlk_error(rc)) {
++				cli_print(cli, "wlan_traffic_monitor_set: %d, %s\n", i, atlk_rc_to_str(rc) );
++				goto error;
++			}
++		}
++
++	} 
++	else {
++		//memset( &counters[i], 0 , sizeof(tx_rx_counters_t) );
++		if ((strstr(sniffer_type, "RX") != NULL) || (sniffer_type[0] == '\0' )) {
++			cli_print(cli, "wlan_traffic_monitor_set to RX");
++			rc = wlan_rx_traffic_monitor_set( (if_idx - 1), rx_traffic_monitor_handler);
++		}
++		if ((strstr(sniffer_type, "TX") != NULL) || (sniffer_type[0] == '\0')) {
++			cli_print(cli, "wlan_traffic_monitor_set to TX");
++			rc = wlan_tx_traffic_monitor_set( (if_idx - 1), tx_traffic_monitor_handler);
++		}
++		if (atlk_error(rc)) {
++			cli_print(cli, "wlan_traffic_monitor_set: %d, %s", (int)(if_idx - 1), atlk_rc_to_str(rc) );
++			goto error;
++		}
++	}
++
++	cli_print(cli, "NOTE : Sniffer on i %d started, server %s:%d, sniffer id %d", if_idx, server_ip, server_port, sniffer_id);
++	return CLI_OK;
++	
++error:
++	
++  return atlk_error(rc);
++}
++
++
++int cli_qa_sniffer_stop( struct cli_def *cli, const char *command, char *argv[], int argc ) 
++{
++	  atlk_rc_t             rc    				= ATLK_OK;
++		int										if_idx				= 0;
++
++		(void) command;
++		(void) argv;
++		(void) argc;
++
++	  IS_HELP_ARG("sniffer stop -if_idx 1|2")
++
++		GET_INT("-if_idx", if_idx, 0, "Specify interface index");
++		if ( if_idx < 1 || if_idx > 3) {
++			cli_print(cli, "ERROR : if_index is not optional and must be in range of 1,2 or 3 to set both rf_if immidiatly");
++			return CLI_ERROR;
++		}
++
++
++		/* Register a callback for WLAN device */
++		if (if_idx == 3){
++
++			for ( int i=0; i <= 1; i++ ) {
++				rc = wlan_rx_traffic_monitor_set( i, NULL);
++				if (atlk_error(rc)) {
++					cli_print(cli, "wlan_rx_traffic_monitor_set: %d, %s\n", i, atlk_rc_to_str(rc) );
++					goto error;
++				}
++			}
++
++		}
++		else {
++
++			rc = wlan_rx_traffic_monitor_set( (if_idx-1), NULL);
++			if (atlk_error(rc)) {
++			 cli_print(cli, "wlan_traffic_monitor_set: %s\n", atlk_rc_to_str(rc) );
++			 goto error;
++			}
++		}
++		
++		soc_close(hwd[RX]);
++		soc_close(hwd[TX]);
++		hwd[0] = 0;
++		hwd[1] = 0;
++		return CLI_OK;
++
++	 error:
++		 return atlk_error(rc);
++}
++
++int cli_qa_sniffer_settings(struct cli_def *cli, const char *command, char *argv[], int argc)
++{
++	int						id = 0;
++	int32_t					i = 0;
++	atlk_rc_t				rc = ATLK_OK;
++
++	(void)command;
++	
++	IS_HELP_ARG("sniffer setting -id 1..4")
++
++	CHECK_NUM_ARGS /* make sure all parameter are there */
++
++	GET_INT("-id", id, i, "Specify sniffer index");
++	if (id < 1 || id > 4) {
++		cli_print(cli, "ERROR : id must be in range of 1-4");
++		return CLI_ERROR;
++	}
++	sniffer_id = id;
++	return rc;
++
++}
++
++ 
++#endif
+diff --git a/embedded/sdk/sdk-4.x/common/v2x_cli/v2x_cli.h b/embedded/sdk/sdk-4.x/common/v2x_cli/v2x_cli.h
+index 0453878..c433659 100644
+--- a/embedded/sdk/sdk-4.x/common/v2x_cli/v2x_cli.h
++++ b/embedded/sdk/sdk-4.x/common/v2x_cli/v2x_cli.h
+@@ -31,6 +31,8 @@
+ #endif
+ 
+ #ifdef __THREADX__
++#include <atlk/remote.h>
++#include <atlk/v2x_remote.h>
+ #include <tx_api.h>
+ #include <atlk/can_service.h>
+ #include <craton/imq.h>
+diff --git a/embedded/sdk/sdk-4.x/linux/x86_64-linux-gnu/bin/v2x-cli b/embedded/sdk/sdk-4.x/linux/x86_64-linux-gnu/bin/v2x-cli
+deleted file mode 100755
+index e0d34dd..0000000
+Binary files a/embedded/sdk/sdk-4.x/linux/x86_64-linux-gnu/bin/v2x-cli and /dev/null differ
+diff --git a/embedded/sdk/sdk-4.x/threadx/Makefile b/embedded/sdk/sdk-4.x/threadx/Makefile
+index fb84da4..93333dd 100644
+--- a/embedded/sdk/sdk-4.x/threadx/Makefile
++++ b/embedded/sdk/sdk-4.x/threadx/Makefile
+@@ -1,10 +1,6 @@
+-<<<<<<< HEAD
+-export SDK_DIR := /media/sf_fw_release/sdk-4.11.1-rc2-sc-i686-linux-gnu/
+-
+-=======
+ #export SDK_DIR := /media/sf_fw_release/sdk-4.11.1-alpha4-sc-i686-linux-gnu
+ export SDK_DIR := /media/sf_ATE_proj/sdk-4.11.1-rc2-sc-i686-linux-gnu/
+->>>>>>> ae59499f12d1008bc1858004cc1b83d1afac34f7
++
+ #export SDK_DIR := /docs/ATE/fw_releases/sdk-4.3.0-beta7-mc-i686-linux-gnu
+ 
+ 
+diff --git a/embedded/sdk/sdk-5.x/common/link/link.c b/embedded/sdk/sdk-5.x/common/link/link.c
+index 9d41388..e55b097 100644
+--- a/embedded/sdk/sdk-5.x/common/link/link.c
++++ b/embedded/sdk/sdk-5.x/common/link/link.c
+@@ -10,6 +10,7 @@
+ #include <assert.h>
+ #include <inttypes.h>
+ #include <unistd.h>
++#include </media/sf_ATE_proj/secton-sdk-5.2.0-alpha1/include/atlk/v2x_service.h>
+ #include <atlk/v2x_service.h>
+ #include <atlk/v2x.h>
+ 
+@@ -25,7 +26,7 @@
+ #include "../../linux/remote/remote.h"
+ 
+ static v2x_service_t 						*v2x_service = NULL;
+-static v2x_service_t                        *v2x_service_ptr = NULL;
++
+ // /* End indication thread */
+ // /* thread priority */
+ // #ifdef __THREADX__
+@@ -44,13 +45,14 @@ static v2x_service_t                        *v2x_service_ptr = NULL;
+ // /* Sync loss indication */
+ //static int is_sync_loss = 0;
+ /* channel access configuration */
++/*
+ #define V2X_DOT4_CHANNEL_START_REQUEST_INIT {  \
+  .if_index = V2X_IF_INDEX_NA,                  \
+  .channel_id = V2X_CHANNEL_ID_INIT,            \
+  .time_slot = V2X_TIME_SLOT_NA,                \
+  .immediate_access = 0                         \
+ }
+-
++*/
+ #ifdef __THREADX__
+ ///////////////////                   /////////////////////////////////////////
+ ///////////////////   WAVE  IPv6      /////////////////////////////////////////
+@@ -190,8 +192,8 @@ int cli_v2x_link_service_delete( struct cli_def *cli, const char *command, char
+   atlk_rc_t             rc    = ATLK_OK;
+ 
+ 
+-  //disable till support will be available from SDK
+-  #if 0
++
++
+ 
+   (void) command;
+   
+@@ -204,8 +206,10 @@ int cli_v2x_link_service_delete( struct cli_def *cli, const char *command, char
+   }
+ 	
+ 	syslog( LOG_DEBUG, "v2x_service_delete pointer is %p", (void*) v2x_service );
+-
++	//disable till support will be available from SDK
++#if 0
+ 	rc = v2x_service_delete(v2x_service);
++#endif
+   if ( atlk_error(rc) ) {
+     cli_print ( cli, "ERROR : v2x_service_delete: %d, %s\n", rc, atlk_rc_to_str(rc) );
+     goto error;
+@@ -213,7 +217,7 @@ int cli_v2x_link_service_delete( struct cli_def *cli, const char *command, char
+ 
+ error:
+   v2x_service = NULL;
+-#endif
++
+   return atlk_error(rc);
+   
+ }
+@@ -233,8 +237,18 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
+   
+   IS_HELP_ARG("link socket create -if_idx 1|2 [-frame_type data|vsa] [-protocol_id 0xXXXX|0xXXXXXXXXXX]")
+ 
++ 
++
+   CHECK_NUM_ARGS /* make sure all parameter are there */
+   
++
++ // get v2x service
++  
++    rc = v2x_service_get(NULL, &v2x_service);
++    if (atlk_error(rc)) {
++      cli_print( cli, "ERROR :v2x_service_get failed: %s\n", atlk_rc_to_str(rc));
++      return EXIT_FAILURE;
++    }
+   GET_INT("-if_idx", link_sk_params.if_index, i, "Specify interface index");
+   if ( link_sk_params.if_index < 1 || link_sk_params.if_index > 4) {
+     cli_print(cli, "ERROR : if_index is not optional and must be in range of 1-4");
+@@ -279,16 +293,15 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
+       }
+     }                                                   \
+   }
+-  if (v2x_service_ptr == NULL) {
+-		rc = v2x_service_get(NULL, &v2x_service_ptr);
++  if (v2x_service == NULL) {
++		rc = v2x_service_get(NULL, &v2x_service);
+     if (atlk_error(rc)) {
+       fprintf(stderr, "v2x_service_get failed: %d\n", rc);
+       return EXIT_FAILURE;
+     }
+   }
+ 
+-
+-  rc = v2x_socket_create(v2x_service_ptr, &myctx->v2x_socket, &link_sk_params);
++  rc = v2x_socket_create(v2x_service, &myctx->v2x_socket, &link_sk_params);
+   if (atlk_error(rc)) {
+     cli_print(cli, "ERROR : v2x_socket_create: %s\n", atlk_rc_to_str(rc));
+     goto error;
+@@ -612,6 +625,42 @@ int cli_v2x_set_link_socket_addr( struct cli_def *cli, const char *command, char
+ }
+ 
+ 
++/*
++int cli_v2x_netif_profile_set( struct cli_def *cli, const char *command, char *argv[], int argc ) //chrub
++{
++	atlk_rc_t      rc = ATLK_OK;
++	
++  	user_context *myctx = (user_context *) cli_get_context(cli);
++	(void) command;
++	(void) argv;
++  	(void) argc;
++
++  v2x_netif_profile_t netif_profile = {
++    .if_index = myctx->if_idx,
++    .channel_id = V2X_CHANNEL_ID_INIT,
++    .datarate = V2X_DATARATE_6MBPS,
++    .power_dbm8 = -20
++  };
++
++  IS_HELP_ARG("link netif_profile set -datarate[] -power_dbm8[-20-20]");
++
++  CHECK_NUM_ARGS // make sure all parameter are there
++
++
++    for (int i = 0; i < argc; i += 2) {
++      GET_INT("-data_rate", netif_profile.datarate, i, "Specify the frame user priority, range 0:7");
++      GET_INT("-power_dbm8", netif_profile.power_dbm8 , i, "power dBm");
++    }
++
++  rc = v2x_netif_profile_set(v2x_service, 0, &netif_profile);
++  if (atlk_error(rc)) {
++    cli_print(cli, "v2x_netif_profile_set: %s\n", atlk_rc_to_str(rc));
++  }
++	return rc;
++
++} 
++*/
++
+ 
+ 
+ //disable till support will be available from SDK
+diff --git a/embedded/sdk/sdk-5.x/common/link/link.h b/embedded/sdk/sdk-5.x/common/link/link.h
+index e28efba..d28b425 100644
+--- a/embedded/sdk/sdk-5.x/common/link/link.h
++++ b/embedded/sdk/sdk-5.x/common/link/link.h
+@@ -26,4 +26,7 @@ int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, cha
+ int cli_v2x_wave6_rx(struct cli_def *cli, const char *command, char *argv[], int argc);
+ int cli_v2x_wave6_init(struct cli_def *cli, const char *command, char *argv[], int argc);
+ int cli_v2x_wave6_tx(struct cli_def *cli, const char *command, char *argv[], int argc);
++
++//int cli_v2x_netif_profile_set( struct cli_def *cli, const char *command, char *argv[], int argc ); //chrub
++
+ #endif /* __ATE_V2X_CLI_LINK_H__ */
+diff --git a/embedded/sdk/sdk-5.x/common/v2x_cli/list.h b/embedded/sdk/sdk-5.x/common/v2x_cli/list.h
+index a6810c6..3a593cf 100644
+--- a/embedded/sdk/sdk-5.x/common/v2x_cli/list.h
++++ b/embedded/sdk/sdk-5.x/common/v2x_cli/list.h
+@@ -354,9 +354,9 @@ static inline void list_splice_tail_init(struct list_head *list,
+    *
+    */
+ 
+-/*#define container_of(ptr, type, member) \
++#define container_of(ptr, type, member) \
+                       ((type *) ((char *)(ptr) - offsetof(type, member)))
+-*/
++
+ 
+ /**
+   Get the struct for this entry
+diff --git a/embedded/sdk/sdk-5.x/common/v2x_cli/v2x_cli.c b/embedded/sdk/sdk-5.x/common/v2x_cli/v2x_cli.c
+index 05aa63b..29451ca 100644
+--- a/embedded/sdk/sdk-5.x/common/v2x_cli/v2x_cli.c
++++ b/embedded/sdk/sdk-5.x/common/v2x_cli/v2x_cli.c
+@@ -38,8 +38,6 @@
+ #include "../../common/nav_api/nav_api.h"
+ #endif
+ #include "../../common/link/link.h"
+-#include "../../threadx/ecc/ecc.h"
+-
+ 
+ //#ifdef __linux__
+ #include "../../linux/remote/remote.h"
+@@ -81,10 +79,10 @@ static uint8_t      cli_main_thread_stack[CLI_THREAD_STACKSIZE];
+ #endif
+ 
+ 
+-
++/*
+ #define container_of(ptr, type, member) \
+ 	(type *)((char *)ptr - ((unsigned int) &((type *)0)->member))
+-
++*/
+ 
+ 
+ struct list_head  cli_thread_list;
+@@ -197,6 +195,9 @@ int create_cli_struct( struct cli_def **cli )
+   cli_register_command(*cli, d, "rx", cli_v2x_link_rx, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
+   cli_register_command(*cli, d, "set", cli_v2x_set_link_socket_addr, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
+   cli_register_command(*cli, d, "get", cli_v2x_get_link_socket_addr, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
++
++  //d = cli_register_command(*cli, c, "netif_profile", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set netif profile"); // chrub
++  //cli_register_command(*cli, d, "set", cli_v2x_netif_profile_set, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "set");
+ 	
+ 	d = cli_register_command(*cli, c, "counters", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Counters");
+ 	cli_register_command(*cli, d, "reset", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
+diff --git a/embedded/sdk/sdk-5.x/linux/Makefile b/embedded/sdk/sdk-5.x/linux/Makefile
+index 487f870..df56f87 100644
+--- a/embedded/sdk/sdk-5.x/linux/Makefile
++++ b/embedded/sdk/sdk-5.x/linux/Makefile
+@@ -1,47 +1,46 @@
++# Autotalks SDK directory
++ATLK_SDK_DIR := /media/sf_ATE_proj/secton-sdk-5.2.0-beta2
+ 
+-## Copyright (C) 2013 Autotalks Ltd.
+ 
+-# To build the example outside of the SDK directory please change SDK_DIR
+-# to the path of the SDK directory
+-# SDK_DIR := $(HOME)/fw_release/sdk-3.2-beta4-pangaea4-i686-linux-gnu
+-# COMMON := ../common
+-
+-ifeq ($(SDK_DIR),)
+-SDK_DIR := /home/zohars/craton-host/host
+ COMMON := ../common
+ APPS := ../apps
+-endif
+ 
+-# SDK_DIR := ../../..
+-export SDK_DIR := /home/zohars/craton-host/host
+-# export COMMON := ../common
+ 
+-#TARGET := remote
+-#PLATFORM := linux_u
+-include build/rules.mk
+-#include $(SDK_DIR)/build/common.mk
+-#include $(SDK_DIR)/build/rules.mk
++# Autotalks SDK library directory
++ATLK_SDK_LIB_DIR := $(ATLK_SDK_DIR)/lib
++
++# Autotalks include directory
++ATLK_SDK_INCLUDE_DIR := $(ATLK_SDK_DIR)/include
++
++# Autotalks library name
++ATLK_SDK_LIB := atlkremote_linux_u
+ 
+-include  build/host.mk
++# Common C compilation flags
++ATLK_CFLAGS := -std=gnu99 -Wall -Wextra -Werror
+ 
++# Target application name
++TARGET_APP := v2x_cli
+ 
+-SDK_LIB_DIR := $(SDK_DIR)/sdk/remote_linux_u/lib
+ 
+-CFLAGS := -std=c99  -Wextra -g -D_XOPEN_SOURCE=600 -D_BSD_SOURCE
++# Target source files
++TARGET_SRCS := libcli/libcli.c 
++TARGET_SRCS += $(APPS)/sniffer/sniffer.c
++TARGET_SRCS += $(COMMON)/v2x_cli/v2x_cli.c
++TARGET_SRCS += $(COMMON)/general/general.c
++TARGET_SRCS += $(COMMON)/link/link.c
++TARGET_SRCS += remote/remote.c
+ 
+-CFLAGS += -I$(SDK_DIR)/include
+-CFLAGS += -I$(SDK_DIR)/src/core/include
+-LDFLAGS := -latlkremote_linux_u -lcrypt -L$(SDK_LIB_DIR) 
++# Additional common libraries
++ADDITIONAL_LIBS:= -lpthread -lcrypt -lrt
++               
++$(TARGET_APP):$(TARGET_SRCS)
++	$(CC) -DDSP_CODE_PATH="\"$(ATLK_SDK_DIR)/device/dsp_sw_code.bin\"" -DDSP_DATA_PATH="\"$(ATLK_SDK_DIR)/device/dsp_sw_data.bin\"" -DDSP_CACHE_PATH="\"$(ATLK_SDK_DIR)/device/dsp_sw_code_cache.bin\"" \
++	$(ATLK_CFLAGS) $(TARGET_SRCS) -o $(TARGET_APP) \
++	-I$(ATLK_SDK_INCLUDE_DIR) -L$(ATLK_SDK_LIB_DIR) \
++	-l$(ATLK_SDK_LIB) $(ADDITIONAL_LIBS) \
+ 
+-.DEFAULT_GOAL := $(HOST)/bin/v2x-cli
++all: $(TARGET_APP)
+ 
+-$(HOST)/bin/v2x-cli: \
+-	$(HOST)/obj/libcli/libcli.o \
+-	$(HOST)/obj/$(APPS)/sniffer/sniffer.o \
+-	$(HOST)/obj/$(COMMON)/v2x_cli/v2x_cli.o \
+-	$(HOST)/obj/$(COMMON)/general/general.o \
+-	$(HOST)/obj/$(COMMON)/link/link.o \
+-	$(HOST)/obj/remote/remote.o
++clean:
++	rm -rf $(TARGET_APP)
+ 
+-clean: 
+-	rm -rf $(HOST)
+diff --git a/embedded/sdk/sdk-5.x/linux/remote/remote.c b/embedded/sdk/sdk-5.x/linux/remote/remote.c
+index 01f89bc..95a140f 100644
+--- a/embedded/sdk/sdk-5.x/linux/remote/remote.c
++++ b/embedded/sdk/sdk-5.x/linux/remote/remote.c
+@@ -7,14 +7,14 @@
+ #include <unistd.h>
+ #include <time.h>
+ #include <stdlib.h>
+-
++#include <atlk/ddm_service.h>
+ #include <atlk/wdm.h>
+ #include <atlk/dsm.h>
+-#include <dsm_internal.h>
++//#include <dsm_internal.h>
+ #include <atlk/wdm_service.h>
+-#include <atlk/object.h>
+-#include <atlk/eui48_utils.h>
+-#include <v2x_internal.h>
++
++//#include <atlk/eui48_utils.h>
++//#include <v2x_internal.h>
+ #include <sys/socket.h>
+ #include <sys/ioctl.h>
+ #include <sys/types.h>
+@@ -29,87 +29,17 @@
+ #include <linux/if_ether.h>
+ #include <net/if.h>
+ #include <netinet/in.h>
+-
+-//obsolete use of 'transport' object to communicate with target rsvc deamon
+-#if 0
+-#include <atlk/remote.h>
+-#include <atlk/v2x_remote.h>
+-
+-
+-
+-/* Remote transport  */
+-static remote_transport_t *transport = NULL;
+-
+-
+-remote_transport_t *get_active_cli_transport( void ) {
+-	return transport;
+-}
+-
+-
+-
+-/* Network interface name */
+-#define NETWORK_INTERFACE_NAME "eth0"
+-
+-int cli_create_transport( struct cli_def *cli, const char *command, char *argv[], int argc  ) 
+-{
+-	/* get user context */
+-	// user_context *myctx = (user_context *) cli_get_context(cli);
+-	atlk_rc_t rc = ATLK_OK;
+-	
+-	in_addr_t server_ip4_addr;
+-	  /* Local IPv4 address */
+-  uint32_t local_ipv4_addr;
+-
+-	remote_ip_transport_config_t remote_config = REMOTE_IP_TRANSPORT_CONFIG_INIT;	
+-	char                  str_data[256] = "";
+-
+-	(void) command;
+-
+-
+-  IS_HELP_ARG("remote transport create -ip_addr XX.XX.XX.XX [-timeout_ms 1000]");
+-
+-  CHECK_NUM_ARGS /* make sure all parameter are there */
+-
+-	remote_config.max_rtt_ms = 1000;
+-
+-
+-	GET_STRING("-ip_addr", str_data, 0, "Set ip addr "); 
+-	if ( (server_ip4_addr = inet_addr(str_data)) == INADDR_NONE) {
+-		cli_print( cli, "ERROR : %s is not valid ip addr", str_data );		
+-		return CLI_ERROR;	
+-	}
+-
+-	if ( argc > 2 ) {
+-		GET_INT("-timeout_ms", remote_config.max_rtt_ms, 2, "Specify the number of frames to send");
+-	}
+-	
+-	  /* Get local IPv4 address */
+-  rc = remote_util_local_ipv4_address_get(NETWORK_INTERFACE_NAME , &local_ipv4_addr);
+-  if (atlk_error(rc)) {
+-    cli_print( cli , "remote_transport_local_ipv4_address_get: %s\n", atlk_rc_to_str(rc));
+-    return atlk_error(rc);
+-  }
+-
+-  remote_config.local_ipv4_address = local_ipv4_addr;
+-	remote_config.remote_ipv4_address = server_ip4_addr;
+-	
+-	/* Create the transport objects */	
+-	rc = remote_ip_transport_create(&remote_config, &transport);
+-	if (atlk_error(rc)) { 	 
+-		cli_print ( cli, "ERROR : Failed to create transport : %s\n", atlk_rc_to_str(rc));		
+-		return atlk_error(rc);	
+-	}
+-
+-	return CLI_OK;
+-}
+-#endif
+-
+-#define NETWORK_INTERFACE_NAME "eth0"
++#include <atlk/v2x_service.h>
++#include "remote.h"
++#define NETWORK_INTERFACE_NAME "eth1"
+ #define SECTON_DEVICE_NAME "Secton"
+ static dsm_device_config_t dsm_device;
+ static dsm_service_config_t dsm_service;
+ 
+ static int context;
++#define CODE_PATH "./dsp_sw_code.bin"
++#define DATA_PATH "./dsp_sw_data.bin"
++#define CACHE_PATH "./dsp_sw_code_cache.bin"
+ 
+ 
+ /* Device descriptor */
+@@ -232,6 +162,99 @@ sectonRemoteDevice = {
+      This part should be done by the driver context.
+      In the future, we should assume that this is already done and
+   **/
++static atlk_rc_t
++read_file_contents(const char *path, char **buf_ptr, size_t *size)
++{
++  int f;
++  int rv;
++  struct stat file_stat;
++  ssize_t read_size;
++
++  rv = stat(path, &file_stat);
++
++  if (rv == -1) {
++    printf("%s:\n", path);
++    perror("Unable to stat");
++    return ATLK_E_UNSPECIFIED;
++  }
++
++  *size = file_stat.st_size;
++  if (*size == 0) {
++    *buf_ptr = NULL;
++    return ATLK_OK;
++  }
++
++  *buf_ptr = (void *)malloc(*size);
++  if (!(*buf_ptr)) {
++    return ATLK_E_OUT_OF_MEMORY;
++  }
++
++  f = open(path, O_RDONLY);
++  if (f == -1) {
++    printf("%s:\n", path);
++    perror("Unable to open");
++    return ATLK_E_UNSPECIFIED;
++  }
++
++  read_size = read(f, *buf_ptr, *size);
++  if (read_size < 0) {
++    perror("read failed");
++    return ATLK_E_UNSPECIFIED;
++  }
++
++  if ((size_t)read_size != *size) {
++    printf("Supposed to read %zu bytes, instead read %zu bytes from %s\n",
++           *size, read_size, path);
++    return ATLK_E_UNSPECIFIED;
++  }
++
++  close(f);
++
++  return ATLK_OK;
++}
++
++
++static void
++status_change_handler(ddm_service_t *service_ptr, ddm_status_t status)
++{
++	printf("%p: new state %d\n", service_ptr, status);
++}
++
++
++static atlk_rc_t
++ddm_config_init(ddm_configure_t *config)
++{
++  atlk_rc_t rc;
++
++  if (config == NULL) {
++    return ATLK_E_INVALID_ARG;
++  }
++
++  rc = read_file_contents(CODE_PATH,
++                          &config->binary_buffer_ptr,
++                          &config->binary_size);
++  if (atlk_error(rc)) {
++    return rc;
++  }
++
++  rc = read_file_contents(DATA_PATH,
++                          &config->binary_buffer_ptr,
++                          &config->binary_size);
++  if (atlk_error(rc)) {
++    return rc;
++  }
++
++  rc = read_file_contents(CACHE_PATH,
++                          &config->module_params_ptr,
++                          &config->module_params_size);
++  if (atlk_error(rc)) {
++    return rc;
++  }
++
++  return ATLK_OK;
++}
++
++
+ 
+ //SECTON new remote registration method...
+ 
+@@ -243,11 +266,12 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int
+   // user_context *myctx = (user_context *) cli_get_context(cli);
+   atlk_rc_t rc = ATLK_OK;
+   char  hw_addr[256] = {'\0'};
++  ddm_service_t *ddm_service_ptr = NULL;
+ 
+   struct sockaddr_ll local_addr;
+   int socket_fd;
+   int rv;
+-
++  int retries;
+   int ifindex;
+   int fd;
+   struct ifreq ifr;
+@@ -255,14 +279,17 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int
+   unsigned char *host_hw_addr = NULL;
+   char host_hw_addr_string[80] = {'\0'};
+   (void) command;
+-
+-
+-  IS_HELP_ARG("register to remote device -hw_addr -device_type ");
++  ddm_status_t ddm_status;
++  ddm_configure_t ddm_config = DDM_CONFIGURE_INIT;
++  atlk_wait_t wait;
++  char if_name[16] = {"eth1"};
++  IS_HELP_ARG("register to remote device -hw_addr -device_type -if");
+ 
+   CHECK_NUM_ARGS /* make sure all parameter are there */
+   	
+   GET_STRING("-hw_addr", hw_addr, 0, "Get MAC address  xx:yy:ee:ff:gg:cc (MAC address)");
+   GET_INT("-device_type", device_type, 2, "Set device type [DSM_DEVICE_TYPE_CRATON2 = 0, DSM_DEVICE_TYPE_SECTON = 1]");
++  GET_STRING("-if", if_name, 4, "Get net interface name (for example eth1)");
+ 
+   if (hw_addr[0] != '\0' && sscanf(hw_addr, "%x:%x:%x:%x:%x:%x",
+            (unsigned int *)&(sectonRemoteDevice.rdev_address.octets[0]),
+@@ -300,7 +327,7 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int
+   sprintf(host_hw_addr_string, "%.2X:%.2X:%.2X:%.2X:%.2X:%.2X", host_hw_addr[0], host_hw_addr[1], host_hw_addr[2], host_hw_addr[3], host_hw_addr[4], host_hw_addr[5]);
+   cli_print(cli, "[%d] host hw addr %.2X:%.2X:%.2X:%.2X:%.2X:%.2X", __LINE__, host_hw_addr[0], host_hw_addr[1], host_hw_addr[2], host_hw_addr[3], host_hw_addr[4], host_hw_addr[5]);
+ 
+-  ifindex = if_nametoindex(NETWORK_INTERFACE_NAME);
++  ifindex = if_nametoindex(if_name);
+ 
+   if (ifindex == 0) {
+     perror("if_nametoindex");
+@@ -338,13 +365,13 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int
+ 
+   context = socket_fd;
+ 
+-
++/*
+   rc = dsm_module_init();
+   if (atlk_error(rc)) {
+ 		  cli_print ( cli, "ERROR : Failed to initilize dsm : %s", atlk_rc_to_str(rc));	  
+ 		  return atlk_error(rc);  
+   }
+-
++*/
+   dsm_device.device_name = SECTON_DEVICE_NAME;
+   //dsm_device.device_type = device_type;
+   dsm_device.rdev_ptr = &sectonRemoteDevice;
+@@ -361,6 +388,99 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int
+ 	  return atlk_error(rc);  
+   }
+ 
++  dsm_service.service_name = "DDM";
++  dsm_service.service_type = DSM_SERVICE_TYPE_DDM;
++  /* The name bundles the service to the specific device */
++  dsm_service.device_name = SECTON_DEVICE_NAME;
++  rc = dsm_service_register(&dsm_service, (size_t)1);
++  if (atlk_error(rc)) {
++  	  cli_print ( cli, "ERROR : Failed to register ddm service : %s", atlk_rc_to_str(rc));
++  	  return atlk_error(rc);
++    }
++  cli_print(cli, "[%d] ddm service registration rc = %d", __LINE__, (int)rc);
++  rc = dsm_service_init(dsm_service.service_name, ATLK_FOREVER);
++  if (atlk_error(rc)) {
++	  cli_print ( cli, "ERROR : Failed to init ddm service : %s", atlk_rc_to_str(rc));
++	  return atlk_error(rc);
++  }
++
++  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
++  /////////////////////////////////// handle ddm - start //////////////////////////////////////////////////////
++  ////////////////////////////////////////////////////////////////////////////////////////////////////////////
++
++  rc = ddm_service_get(NULL, &ddm_service_ptr);
++  if (atlk_error(rc)) {
++	  cli_print ( cli, "ERROR :ddm_service_get failed: %s",  atlk_rc_to_str(rc));
++    return EXIT_FAILURE;
++  }
++
++  rc = ddm_status_change_notify_register(ddm_service_ptr,
++                                         status_change_handler);
++  if (atlk_error(rc)) {
++	  cli_print ( cli, "ERROR :ddm_status_change_notify_register failed: %s",
++                  atlk_rc_to_str(rc));
++    return EXIT_FAILURE;
++  }
++
++  rc = ddm_status_get(ddm_service_ptr, &ddm_status, &atlk_wait_forever);
++  if (atlk_error(rc)) {
++	  cli_print ( cli, "ERROR :ddm_status_get failed: %s", atlk_rc_to_str(rc));
++    return EXIT_FAILURE;
++  }
++
++  cli_print ( cli, "ddm_status: %d", ddm_status);
++
++  rc = ddm_config_init(&ddm_config);
++  if (atlk_error(rc)) {
++	  cli_print ( cli, "ERROR :** Device config files missing, "\
++            "not initializing device ** %s", atlk_rc_to_str(rc));
++  }
++  else {
++    retries = 3;
++    wait.wait_type = ATLK_WAIT_INTERVAL;
++    wait.wait_usec = 1000000;
++    do {
++      rc = ddm_configuration_set(ddm_service_ptr,
++                                &ddm_config,
++                                &wait);
++      if (atlk_error(rc)) {
++        switch (rc) {
++          case ATLK_E_EXISTS:
++        	  cli_print ( cli, "ERROR :Configuration already loaded");
++            rc = ATLK_OK;
++            break;
++
++          case ATLK_E_INVALID_STATE:
++            cli_print ( cli, "ERROR :ddm_configuration_set invalid state, retrying...");
++            break;
++
++          case ATLK_E_TIMEOUT:
++        	  cli_print ( cli, "ERROR :ddm_configuration_set timedout, retrying...");
++            break;
++
++          default:
++        	  cli_print ( cli, "ERROR :ddm_configuration_set failed, %s",
++                          atlk_rc_to_str(rc));
++            return EXIT_FAILURE;
++        }
++        retries--;
++        if (retries <= 0) {
++        	cli_print ( cli, "ERROR :ddm_configuration_set exceeded max retries");
++          return EXIT_FAILURE;
++        }
++        if (rc == ATLK_E_INVALID_STATE) {
++          usleep(1000000);
++        }
++      }
++    } while(atlk_error(rc));
++  }
++
++  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
++    /////////////////////////////////// handle ddm - end   //////////////////////////////////////////////////////
++    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
++
++
++
+   return ATLK_OK;
+ }
+ 
+@@ -371,7 +491,12 @@ cli_service_register(struct cli_def *cli, const char *command, char *argv[], int
+ 
+   /* get user context */
+   // user_context *myctx = (user_context *) cli_get_context(cli);
++
+   atlk_rc_t rc = ATLK_OK;
++
++  (void) command;
++  (void) argc;
++
+   IS_HELP_ARG("register to remote service -service_name -service_type ");
+   char  service_name[256] = "";
+   GET_STRING("-service_name", service_name, 0, "Set service name ");
+diff --git a/embedded/sdk/sdk-5.x/linux/remote/remote.h b/embedded/sdk/sdk-5.x/linux/remote/remote.h
+index 4ff3552..15fce17 100644
+--- a/embedded/sdk/sdk-5.x/linux/remote/remote.h
++++ b/embedded/sdk/sdk-5.x/linux/remote/remote.h
+@@ -8,6 +8,7 @@
+ int cli_create_transport( struct cli_def *cli, const char *command, char *argv[], int argc );
+ remote_transport_t *get_active_cli_transport( void );
+ #endif
++
+ int
+ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int argc);
+ 

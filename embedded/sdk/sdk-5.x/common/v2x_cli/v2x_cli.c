@@ -195,6 +195,9 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, d, "rx", cli_v2x_link_rx, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
   cli_register_command(*cli, d, "set", cli_v2x_set_link_socket_addr, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
   cli_register_command(*cli, d, "get", cli_v2x_get_link_socket_addr, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
+
+  //d = cli_register_command(*cli, c, "netif_profile", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set netif profile"); // chrub
+  //cli_register_command(*cli, d, "set", cli_v2x_netif_profile_set, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "set");
 	
 	d = cli_register_command(*cli, c, "counters", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Counters");
 	cli_register_command(*cli, d, "reset", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");

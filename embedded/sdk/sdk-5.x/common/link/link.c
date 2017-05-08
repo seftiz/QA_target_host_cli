@@ -1,4 +1,5 @@
 
+
 #include <stdio.h>
 #include "../general/general.h"
 #include "../v2x_cli/v2x_cli.h"
@@ -10,6 +11,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <unistd.h>
+//#include </media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/v2x_service.h>
 #include <atlk/v2x_service.h>
 #include <atlk/v2x.h>
 #include <atlk/ddm_service.h>
@@ -25,8 +27,15 @@
 
 #include "link.h"
 #include "../../linux/remote/remote.h"
+<<<<<<< HEAD
 #include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
 #include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm_service.h"
+=======
+//#include ".././src/include/dbg.h"
+//#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/src/include/dbg_service.h"
+#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/wdm.h"
+#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/wdm_service.h"
+>>>>>>> 2d33ab16fcbc8aa87a69678c78701c45e8ed80a6
 
 //trying
 typedef struct {
@@ -239,6 +248,9 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
 {
 	v2x_socket_config_t	link_sk_params = V2X_SOCKET_CONFIG_INIT;
 
+
+
+
   int32_t               i     = 0;
   atlk_rc_t             rc    = ATLK_OK;
   char                  str_data[256] = "";
@@ -276,7 +288,7 @@ rc = wdm_service_get(NULL, &wdm_service_ptr);
   
     rc = v2x_service_get(NULL, &v2x_service);
     if (atlk_error(rc)) {
-      cli_print( cli, "ERROR :v2x_service_get failed: %s\n", atlk_rc_to_str(rc));
+      cli_print( cli, "ERROR :v2x_service_get fiailed: %s\n", atlk_rc_to_str(rc));
       return EXIT_FAILURE;
     }
   GET_INT("-if_idx", link_sk_params.if_index, i, "Specify interface index");
@@ -335,8 +347,11 @@ rc = wdm_service_get(NULL, &wdm_service_ptr);
   if (atlk_error(rc)) {
     cli_print(cli, "ERROR : v2x_socket_create: %s\n", atlk_rc_to_str(rc));
     goto error;
-  }
+ }
 
+
+  
+   
   cli_print(cli, "INFO : Create socket pointer %p\n", (void*) myctx->v2x_socket);
   myctx->if_idx = link_sk_params.if_index;
 
@@ -459,22 +474,34 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 	msg_size = (size_t) (strlen(tx_data) / 2);
 	cli_print(cli, "cli_v2x_link_tx - convert hexstr to buffer, msg_size = %d, strlen(tx_data) = %d\n", (int) msg_size, (int)strlen(tx_data) );
   rc = hexstr_to_bytes_arr(tx_data, strlen(tx_data), hex_arr, &msg_size);
+	//cli_print(cli, " rc = %d, data : %s, msg_size : %d, hex_arr : 0x%02x, hex_arr : 0x%02x, hex_arr : 0x%02x ,hex_arr : 0x%02x  ",rc, tx_data,(int)msg_size,hex_arr[0],hex_arr[1],hex_arr[2],hex_arr[3]);
   if (atlk_error(rc)) {
     cli_print(cli, "ERROR : cli_v2x_link_tx - cannot convert hexstr to buffer, error= %s\n", atlk_rc_to_str(rc));
     goto error;
   }
-
+  
   for (i = 0; i < num_frames; ++i) {
 	  	hex_arr[1] = i;
 	  	hex_arr[0] = (i & 0xff00)>>8;
 		rc = v2x_send(myctx->v2x_socket, hex_arr, msg_size, &link_sk_tx_param, NULL);
+		
+		//int j = msg_size;
+		
+		//cli_print(cli, "data :");
+
+		//while (j){
+		//j--;
+		
+		//cli_print(cli, "%02x\n", hex_arr[j] );
+		//}
+		
 		if ( atlk_error(rc) ) {
 			cli_print(cli, "ERROR : v2x_send: %s\n", atlk_rc_to_str(rc));
 			goto error;
 		}
 		else {
 			myctx->cntrs.link_tx_packets ++;
-			m_link_tx_packets ++;
+			m_link_tx_packets ++;		
 			/* Sleep 100 ms between transmissions */
 			if ( (num_frames >= 1) && (rate_hz >= 1) ){
 				int sleep_time_uSec = (1e6 / rate_hz );
@@ -482,6 +509,7 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 			}
 		}
 	}
+  
 error:
   return rc;
 }
@@ -543,6 +571,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 				cli_print(cli, "ERROR : rx session timed out:\n");
 				goto error;
 		    }
+			//cli_print(cli, "v2x_socket : %p\n",myctx->v2x_socket );
 
 			rc = v2x_receive(myctx->v2x_socket, buf, &size, &link_sk_rx, NULL);
 			if ( (rc == ATLK_E_TIMEOUT) || (rc == ATLK_E_NOT_READY)||(rc == ATLK_E_EMPTY)) {
@@ -661,6 +690,42 @@ int cli_v2x_set_link_socket_addr( struct cli_def *cli, const char *command, char
   return CLI_OK;
 }
 
+
+/*
+int cli_v2x_netif_profile_set( struct cli_def *cli, const char *command, char *argv[], int argc ) //chrub
+{
+	atlk_rc_t      rc = ATLK_OK;
+	
+  	user_context *myctx = (user_context *) cli_get_context(cli);
+	(void) command;
+	(void) argv;
+  	(void) argc;
+
+  v2x_netif_profile_t netif_profile = {
+    .if_index = myctx->if_idx,
+    .channel_id = V2X_CHANNEL_ID_INIT,
+    .datarate = V2X_DATARATE_6MBPS,
+    .power_dbm8 = -20
+  };
+
+  IS_HELP_ARG("link netif_profile set -datarate[] -power_dbm8[-20-20]");
+
+  CHECK_NUM_ARGS // make sure all parameter are there
+
+
+    for (int i = 0; i < argc; i += 2) {
+      GET_INT("-data_rate", netif_profile.datarate, i, "Specify the frame user priority, range 0:7");
+      GET_INT("-power_dbm8", netif_profile.power_dbm8 , i, "power dBm");
+    }
+
+  rc = v2x_netif_profile_set(v2x_service, 0, &netif_profile);
+  if (atlk_error(rc)) {
+    cli_print(cli, "v2x_netif_profile_set: %s\n", atlk_rc_to_str(rc));
+  }
+	return rc;
+
+} 
+*/
 
 
 
@@ -806,8 +871,11 @@ int cli_v2x_cmd_sdk_version(struct cli_def *cli,
   size_t sdk_version_size;
   ddm_service_t *ddm_service = 
     ((diag_cli_services_t *)cli_get_context(cli))->ddm_service_ptr;
+  wdm_service_t *wdm_service = 
+    ((diag_cli_services_t *)cli_get_context(cli))->wdm_service_ptr;
   char *sdk_ver = sdk_version;
   atlk_rc_t rc;
+  wdm_dsp_version_t dsp_version;
 
   sdk_version_size = sizeof(sdk_version);
   rc = ddm_version_get(ddm_service, sdk_version, &sdk_version_size);
@@ -830,6 +898,20 @@ int cli_v2x_cmd_sdk_version(struct cli_def *cli,
   
   sdk_ver = sdk_ver + strlen(sdk_version) + 1;
   cli_print(cli, "  Software version: %s", sdk_ver);
+
+  rc = wdm_dsp_version_get(wdm_service, &dsp_version);
+  if (atlk_error(rc)) {
+    cli_print(cli, "failed to get WDM DSP version rc=%d", rc);
+    return CLI_ERROR;
+  }
+
+  cli_print(cli, "DSP:");
+
+  cli_print(cli,
+            "  Software version: %"PRIu8".%"PRIu8".%"PRIu8,
+            dsp_version.major,
+            dsp_version.minor,
+            dsp_version.sw_revision);
 
   return CLI_OK;
 }
@@ -1189,3 +1271,5 @@ int cli_v2x_wave6_rx(struct cli_def *cli, const char *command, char *argv[], int
 
 }
 #endif
+
+

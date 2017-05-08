@@ -29,8 +29,6 @@
 
 #include "list.h"
 #include "v2x_cli.h"
-
-
 //#include "../../common/session/session.h"
 #ifdef __THREADX__	
 #include "../../common/nav_api/nav_api.h"
@@ -41,20 +39,26 @@
 
 #ifdef __linux__
 #include "../../linux/remote/remote.h"
- #endif
+#include "../../apps/sniffer/sniffer.h"
 
- #ifdef __THREADX__
+#endif
+
+
+
+
+#ifdef __THREADX__
 #include "../../threadx/phy/phy_cca_control.h"
 #include "../../threadx/cpu/cpu_load.h"
 #include "../../threadx/can/can.h"
 
 #include "../../threadx/loopbacks/eth_loopback.h"
 #include "../../threadx/cli_arc/socket_imq_bridge.h"
+#include "../../threadx/fua/fua.h"
 
 /* Add apps to cli */
 #include "../../apps/crypto/ecdsa-example.h"
 #include "../../apps/sniffer/sniffer.h"
-#endif	
+#endif
 
 #ifdef __THREADX__
 void v2x_cli_main(ULONG arg);
@@ -66,8 +70,6 @@ void *connection_handler( void *thread_desc );
 
 void cli_cleanup( struct cli_def *cli );
 
-	#include "../../common/management/mng_api.h"
-        #include <atlk/mibs/wlan-mib.h>
 
 #ifdef __THREADX__
 static TX_THREAD    cli_main_thread;
@@ -162,13 +164,13 @@ int create_cli_struct( struct cli_def **cli )
 	d = cli_register_command(*cli, c, "transport", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Transport layer handling");
   c = cli_register_command(*cli, d, "create", cli_create_transport, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Create transport layer");
 
-		
+
 #endif
+
 
  	
   /* link commands */
   c = cli_register_command(*cli, NULL, "link", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "send message frame via SDK");
-
   d = cli_register_command(*cli, c, "service", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set management mibs");
   cli_register_command(*cli, d, "create", cli_v2x_link_service_create, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "open link new socket");
   cli_register_command(*cli, d, "delete", cli_v2x_link_service_delete, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "close link socket");
@@ -180,39 +182,37 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, d, "set", cli_v2x_set_link_socket_addr, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
   cli_register_command(*cli, d, "get", cli_v2x_get_link_socket_addr, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Receive Data via link socket");
 	
-  d = cli_register_command(*cli, c, "counters", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Counters");
-  cli_register_command(*cli, d, "reset", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
+	d = cli_register_command(*cli, c, "counters", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Counters");
+	cli_register_command(*cli, d, "reset", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
   cli_register_command(*cli, d, "print", cli_v2x_link_print_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "print Internal link counters");
 
   cli_register_command(*cli, c, "reset_cntrs", cli_v2x_link_reset_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Reset Internal link counters");
   cli_register_command(*cli, c, "print_cntrs", cli_v2x_link_print_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "print Internal link counters");
-
   d = cli_register_command(*cli, c, "dot4", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set dot4 CS");
 	cli_register_command(*cli, d, "start_ch", cli_v2x_dot4_channel_start_req, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "send dot4 channel start request");
+#ifdef __THREADX__
+	  d = cli_register_command(*cli, c, "sniffer", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Sniffer app from wlan to udp");
+	  cli_register_command(*cli, d, "start", cli_qa_sniffer_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start sniffer");
+	  cli_register_command(*cli, d, "stop", cli_qa_sniffer_stop, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "stop sniffer");
 
-  d = cli_register_command(*cli, c, "api_test", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Api tests"); //chrub
+  d = cli_register_command(*cli, c, "rxtx", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Generate v2x session can be loopback (-lb flag) or stand alone");
+  //cli_register_command(*cli, d, "start", cli_v2x_link_rxtx_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Generate v2x session can be loopback (-lb flag) or stand alone");
+  //cli_register_command(*cli, d, "end", cli_v2x_link_rxtx_stop, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Generate v2x session can be loopback (-lb flag) or stand alone");
+  d = cli_register_command(*cli, c, "wave6", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "v2x WAVE IPv6 test");
+  //cli_register_command(*cli, d, "init", cli_v2x_wave6_init, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "init WAVE IPv6");
+  //cli_register_command(*cli, d, "tx", cli_v2x_wave6_tx, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "WAVE IPv6 Tx");
+  //cli_register_command(*cli, d, "rx", cli_v2x_wave6_rx, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "WAVE IPv6 Rx");
+ 
 
-  cli_register_command(*cli, d, "dot4_channel_start", cli_test_v2x_link_dot4_channel_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, " Send IEEE Std 1609.4-2016 service primitive MLMEX-CHSTART.request and receive MLMEX-CHSTART.confirm"); //chrub
-  cli_register_command(*cli, d, "dot4_channel_end", cli_test_v2x_link_dot4_channel_end, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, ""); //chrub
-  cli_register_command(*cli, d, "dot4_channel_end_receive",cli_test_v2x_link_dot4_channel_end_receive , PRIVILEGE_UNPRIVILEGED, MODE_EXEC, ""); //chrub
-  
-  cli_register_command(*cli, d, "send",cli_test_v2x_link_send , PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Send V2X frame"); //chrub
-
-  cli_register_command(*cli, d, "receive",cli_test_v2x_link_receive , PRIVILEGE_UNPRIVILEGED, MODE_EXEC, " Receive V2X frame"); //chrub
-
-  cli_register_command(*cli, d, "socket_create",cli_test_v2x_link_socket_create , PRIVILEGE_UNPRIVILEGED, MODE_EXEC, " Receive V2X frame"); //chrub
-
-  cli_register_command(*cli, d, "service_get", cli_test_v2x_link_service_get, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Get pointer to default V2X service"); //chrub
-
-
-
-  /*mib api commands*/
-  	d = cli_register_command(*cli, NULL, "mng", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Management mibs");
-        cli_register_command(*cli, d, "create", cli_v2x_managment_service_create, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Create managment service");
-	cli_register_command(*cli, d, "delete", cli_v2x_managment_service_delete, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Delete managment service");
-	c = cli_register_command(*cli, d, "mibApi",NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Test managment mibs");
-        cli_register_command(*cli, c, "testGet",cli_v2x_mibApi_testGet, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Test managment mibs Set functions");
-        cli_register_command(*cli, c, "testSet",cli_v2x_mibApi_testSet, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Test managment mibs Get functions");
+   
+  /* handle gps command */
+  c = cli_register_command(*cli, NULL, "nav", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Navigation API operations");
+  cli_register_command(*cli, c, "init", cli_v2x_nav_init, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "init nav api");
+  cli_register_command(*cli, c, "start", cli_v2x_nav_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start nav api handler");
+  cli_register_command(*cli, c, "stop", cli_v2x_nav_stop, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start nav api handler");
+	
+	d = cli_register_command(*cli, NULL, "mng", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Management mibs");
+  cli_register_command(*cli, d, "create", cli_v2x_managment_service_create, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Create managment service");
 
   c = cli_register_command(*cli, d, "set", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set management mibs");
   cli_register_command(*cli, c, "wlanDefaultTxDataRate", cli_v2x_set_wlanDefaultTxDataRate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set default transmission data rate.");
@@ -227,16 +227,6 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, c, "wlanFrameTxCnt", cli_v2x_get_wlanFrameTxCnt, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Get transmitted frame counter");
   cli_register_command(*cli, c, "wlanFrequency", cli_v2x_get_wlanFrequency, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Get current RX and TX frequency");
 	cli_register_command(*cli, c, "wlanMacAddress", cli_v2x_get_wlanMacAddress, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Get WLAN mac address");
-
-#ifdef __THREADX__
-   
-  /* handle gps command */
-  c = cli_register_command(*cli, NULL, "nav", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Navigation API operations");
-  cli_register_command(*cli, c, "init", cli_v2x_nav_init, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "init nav api");
-  cli_register_command(*cli, c, "start", cli_v2x_nav_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start nav api handler");
-  cli_register_command(*cli, c, "stop", cli_v2x_nav_stop, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start nav api handler");
-	
-
 
   /* can */
 	d = cli_register_command(*cli, NULL, "can", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "can bus implementation");
@@ -254,12 +244,14 @@ int create_cli_struct( struct cli_def **cli )
 	cli_register_command(*cli, c, "print", cli_v2x_can_print_cntrs, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Print Internal link counters");
 	c = cli_register_command(*cli, d, "rx", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "RX");
 	cli_register_command(*cli, c, "rate", cli_v2x_can_print_rx_rate, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Print RX average frames rate");
-
-/* System test command */
+	
+	/* fua */
+	//c = cli_register_command(*cli, NULL, "fua", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "FW update agent");
+	//cli_register_command(*cli, c, "init", cli_v2x_fua_init, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "init fua service");
 
 #endif
 
-#if defined(__CRATON_NO_ARC) || defined(__linux__)
+#ifdef __CRATON_NO_ARC
   
 	/* ecc */
 	d = cli_register_command(*cli, NULL, "ecc", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "ecc implementation");
@@ -283,16 +275,10 @@ int create_cli_struct( struct cli_def **cli )
   
 	/* Verification */
   c = cli_register_command(*cli, d, "verification", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Verifications actions");
-  cli_register_command(*cli, c, "public-key", cli_v2x_ecc_verification_set_public_key, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Public key settings");
+  cli_register_command(*cli, c, "key", cli_v2x_ecc_verification_set_public_key, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Public key settings");
   cli_register_command(*cli, c, "request", cli_v2x_ecc_verification_request_send, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Send sign request");
   cli_register_command(*cli, c, "signature", cli_v2x_ecc_verification_set_signature, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Signature settings");
-  cli_register_command(*cli, c, "get-response", cli_v2x_ecc_verification_get_response, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Get verification response");
 
-	
-
-#endif
-
-#ifdef __CRATON_NO_ARC
 
 	/** Handle apps */
 
@@ -301,9 +287,6 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, d, "ecdsa", cli_ecdsa_example, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "ecdsa sdk exmpale");
 
 	
-  d = cli_register_command(*cli, c, "sniffer", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Sniffer app from wlan to udp");
-  cli_register_command(*cli, d, "start", cli_qa_sniffer_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start sniffer");
-  cli_register_command(*cli, d, "stop", cli_qa_sniffer_stop, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "stop sniffer");
 
   #endif
 
@@ -361,8 +344,8 @@ void craton_user_init(void)
 {
   int 				rv;
 	atlk_rc_t 	rc        = ATLK_OK;
-	int					rf_freqs[] = { RF_IF_1_ASSIGN_FREQ , RF_IF_2_ASSIGN_FREQ };
-	int					i = 0, rf_if = 0;
+	// int					rf_freqs[] = { RF_IF_1_ASSIGN_FREQ , RF_IF_2_ASSIGN_FREQ };
+	// int					i = 0, rf_if = 0;
 	
 	/* Get default MIB service */
   rc = cli_v2x_managment_init();
@@ -370,19 +353,19 @@ void craton_user_init(void)
     fprintf(stderr, "mib_default_service_get: %s\n", atlk_rc_to_str(rc));
   }
 	
-	for ( i=0, rf_if=1; i< 2; i++, rf_if++ ) {
+	// for ( i=0, rf_if=1; i< 2; i++, rf_if++ ) {
 		
-		printf("\nV2X-CLI setting RF %d to Frequency %d with power %d\n", rf_if, rf_freqs[i], RF_DEFUALT_POWER);
-		rc = mib_set_wlanDefaultTxPower(cli_v2x_managment_service_get(), rf_if, RF_DEFUALT_POWER ); 
-		if (atlk_error(rc)) {
-			printf( "ERROR :  mib_set_wlanDefaultTxPower  failed for if %d and value %d: %s\n", rf_if, RF_DEFUALT_POWER, atlk_rc_to_str(rc));
-		}
+		// printf("\nV2X-CLI setting RF %d to Frequency %d with power %d\n", rf_if, rf_freqs[i], RF_DEFUALT_POWER);
+		// rc = mib_set_wlanDefaultTxPower(cli_v2x_managment_service_get(), rf_if, RF_DEFUALT_POWER ); 
+		// if (atlk_error(rc)) {
+			// printf( "ERROR :  mib_set_wlanDefaultTxPower  failed for if %d and value %d: %s\n", rf_if, RF_DEFUALT_POWER, atlk_rc_to_str(rc));
+		// }
 		
-		rc = mib_set_wlanFrequency (cli_v2x_managment_service_get(), rf_if, rf_freqs[i]); 
-		if (atlk_error(rc)) {
-			printf( "ERROR :  wlanFrequency  failed for if %d and value %d: %s\n", rf_if, rf_freqs[i], atlk_rc_to_str(rc));
-		}
-	}
+		// rc = mib_set_wlanFrequency (cli_v2x_managment_service_get(), rf_if, rf_freqs[i]); 
+		// if (atlk_error(rc)) {
+			// printf( "ERROR :  wlanFrequency  failed for if %d and value %d: %s\n", rf_if, rf_freqs[i], atlk_rc_to_str(rc));
+		// }
+	// }
 	
 	printf("\nV2X-CLI is disable vca log\n");
 	rc = mib_set_vcaLogMode (cli_v2x_managment_service_get(), MIB_vcaLogMode_off );
@@ -390,6 +373,7 @@ void craton_user_init(void)
     printf( "ERROR :  mib_set_vcaLogMode failed, %s\n", atlk_rc_to_str(rc));
   }
   
+	
 	INIT_LIST_HEAD(&cli_thread_list);
 	
   /* Create a thread to run main server */

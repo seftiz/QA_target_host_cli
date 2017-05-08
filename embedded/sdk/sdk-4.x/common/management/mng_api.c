@@ -22,9 +22,10 @@ int cli_v2x_managment_init( void )
   if (atlk_error(rc)) {
     return (-1);
   }
-	struct cli_def *cli = NULL;
+	
+        struct cli_def *cli = NULL;
 	/* Create the remote MIB service */
-	rc = mib_remote_service_create(get_active_cli_transport(), NULL, &mib_service);
+//	rc = mib_remote_service_create(get_active_cli_transport(), NULL, &mib_service);
 	if (atlk_error(rc)) {
 		cli_print( cli, "Remote MIB service create: %s\n", atlk_rc_to_str(rc));
 		/* Clean-up resources */
@@ -60,7 +61,7 @@ int cli_v2x_managment_service_create( struct cli_def *cli, const char *command, 
     }
   } 
   else if ( strcmp( (char*) str_data, "remote") == 0 ) {
-
+#if 0
 		/* Create the remote V2X service */
 		rc = mib_remote_service_create( get_active_cli_transport(), NULL, &mib_service);
 		if (atlk_error(rc)) {
@@ -68,7 +69,7 @@ int cli_v2x_managment_service_create( struct cli_def *cli, const char *command, 
 			/* Clean-up resources */
 			goto error;
 		}
-
+#endif
 		cli_print( cli, "Remote Managment service is not avaliable" );
 
   } 
