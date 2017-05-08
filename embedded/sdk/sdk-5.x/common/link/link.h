@@ -3,12 +3,10 @@
 
 
 #include "../../linux/libcli/libcli.h"
-<<<<<<< HEAD
-#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
-=======
+
 //#include ".././src/include/dbg.h"
-#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/wdm.h"
->>>>>>> 2d33ab16fcbc8aa87a69678c78701c45e8ed80a6
+#include <atlk/wdm.h>
+
 int cli_v2x_cmd_sdk_version( struct cli_def *cli, const char *command, char *argv[], int argc );
 
 int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *argv[], int argc );

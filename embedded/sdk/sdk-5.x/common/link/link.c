@@ -27,15 +27,10 @@
 
 #include "link.h"
 #include "../../linux/remote/remote.h"
-<<<<<<< HEAD
+
 #include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
 #include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm_service.h"
-=======
-//#include ".././src/include/dbg.h"
-//#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/src/include/dbg_service.h"
-#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/wdm.h"
-#include "/media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3/include/atlk/wdm_service.h"
->>>>>>> 2d33ab16fcbc8aa87a69678c78701c45e8ed80a6
+
 
 //trying
 typedef struct {

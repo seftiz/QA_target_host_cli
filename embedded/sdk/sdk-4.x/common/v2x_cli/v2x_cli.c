@@ -53,7 +53,7 @@
 
 #include "../../threadx/loopbacks/eth_loopback.h"
 #include "../../threadx/cli_arc/socket_imq_bridge.h"
-#include "../../threadx/fua/fua.h"
+//#include "../../threadx/fua/fua.h"
 
 /* Add apps to cli */
 #include "../../apps/crypto/ecdsa-example.h"
