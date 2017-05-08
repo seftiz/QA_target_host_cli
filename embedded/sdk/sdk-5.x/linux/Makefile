@@ -1,8 +1,13 @@
 # Autotalks SDK directory
+
 #ATLK_SDK_DIR := /docs/ATE/fw_releases/dbg-secton-sdk-5.3.0-alpha2
 #ATLK_SDK_DIR := /docs/ATE/fw_releases/craton2-sdk-5.3.0-alpha1
 #ATLK_SDK_DIR := /media/sf_ATE_proj/dbg-secton-sdk-5.3.0-alpha2
-ATLK_SDK_DIR := /media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3
+#ATLK_SDK_DIR := /media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3
+
+ATLK_SDK_DIR := /media/sf_ATE_proj/dbg-secton-sdk-5.3.0-alpha2
+#ATLK_SDK_DIR := /docs/ATE/fw_releases/craton2-sdk-5.3.0-alpha1
+
 
 COMMON := ../common
 APPS := ../apps

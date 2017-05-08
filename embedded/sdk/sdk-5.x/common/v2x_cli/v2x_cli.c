@@ -214,6 +214,8 @@ int create_cli_struct( struct cli_def **cli )
 
   d = cli_register_command(*cli, c, "dot4", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set dot4 CS");
   cli_register_command(*cli, d, "start_ch", cli_v2x_dot4_channel_start_req, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "send dot4 channel start request");
+    cli_register_command(*cli, d, "end_ch", cli_v2x_dot4_channel_end_req, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "send dot4 channel end request");
+
 #ifdef __THREADX__
 	  d = cli_register_command(*cli, c, "sniffer", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Sniffer app from wlan to udp");
 	  cli_register_command(*cli, d, "start", cli_qa_sniffer_start, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "start sniffer");

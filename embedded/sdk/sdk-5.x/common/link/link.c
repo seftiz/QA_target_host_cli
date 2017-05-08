@@ -798,6 +798,7 @@ int cli_v2x_dot4_channel_end_req(struct cli_def *cli, const char *command, char 
 {
 
 	v2x_dot4_channel_end_request_t request;
+wdm_service_t *wdm_service_ptr = NULL;
 	atlk_wait_t wait;
     int i = 0;
 	atlk_rc_t      rc = ATLK_OK;
@@ -828,7 +829,11 @@ int cli_v2x_dot4_channel_end_req(struct cli_def *cli, const char *command, char 
 	  request.channel_id.channel_num = ch_id;
 
 
-
+ rc = wdm_service_get(NULL, &wdm_service_ptr);
+  if (atlk_error(rc)) {
+    (void)fprintf(stderr, "wdm_service_get failed: %d\n", rc);
+    return EXIT_FAILURE;
+  }
      rc = v2x_dot4_channel_end(v2x_service, &request, &wait);
      if (rc != ATLK_OK) {
     	 cli_print(cli, "ERROR : v2x channel request : %s\n", atlk_rc_to_str(rc));

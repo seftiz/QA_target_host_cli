@@ -25,6 +25,7 @@ int cli_v2x_set_link_socket_addr( struct cli_def *cli, const char *command, char
 int cli_v2x_link_rxtx_start(struct cli_def *cli, const char *command, char *argv[], int argc);
 int cli_v2x_link_rxtx_stop(struct cli_def *cli, const char *command, char *argv[], int argc);
 int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, char *argv[], int argc);
+int cli_v2x_dot4_channel_end_req(struct cli_def *cli, const char *command, char *argv[], int argc);
 int cli_v2x_wave6_rx(struct cli_def *cli, const char *command, char *argv[], int argc);
 int cli_v2x_wave6_init(struct cli_def *cli, const char *command, char *argv[], int argc);
 int cli_v2x_wave6_tx(struct cli_def *cli, const char *command, char *argv[], int argc);
