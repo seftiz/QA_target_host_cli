@@ -28,8 +28,9 @@
 #include "link.h"
 #include "../../linux/remote/remote.h"
 
-#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
-#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm_service.h"
+//#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
+#include "atlk/wdm.h"
+//#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm_service.h"
 
 
 //trying
@@ -254,7 +255,7 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
   user_context *myctx = (user_context *) cli_get_context(cli);
   (void) command;
   
-  IS_HELP_ARG("link socket create -if_idx 1|2 [-frame_type data|vsa] [-protocol_id 0xXXXX|0xXXXXXXXXXX]")
+  IS_HELP_ARG("link socket create -if_idx 0|1 [-frame_type data|vsa] [-protocol_id 0xXXXX|0xXXXXXXXXXX]")
 
  
 
@@ -287,7 +288,7 @@ rc = wdm_service_get(NULL, &wdm_service_ptr);
       return EXIT_FAILURE;
     }
   GET_INT("-if_idx", link_sk_params.if_index, i, "Specify interface index");
-  if ( link_sk_params.if_index < 1 || link_sk_params.if_index > 4) {
+  if ( link_sk_params.if_index > 4) {
     cli_print(cli, "ERROR : if_index is not optional and must be in range of 1-4");
     return CLI_ERROR;
   }
