@@ -41,14 +41,13 @@ typedef struct {
 } diag_cli_services_t;
 //till here
 
-static v2x_service_t 						*v2x_service = NULL;
-static wdm_service_t                                            *wdm_service_ptr = NULL;
+static int if_index_state[2] = {0,0};
 // /* End indication thread */
 // /* thread priority */
 // #ifdef __THREADX__
 // #define TX_THREAD_PRIORITY 40
 // static TX_THREAD end_indication_thread;
-// static void end_indication_thread_entry(ULONG input);
+/// static void end_indication_thread_entry(ULONG input);
 // static uint8_t end_indication_thread_stack[0x1000];
 // static void end_indication_thread_entry(ULONG input);
 
@@ -128,6 +127,7 @@ int cli_v2x_link_service_create( struct cli_def *cli, const char *command, char 
 {
   char                  str_data[256] = "";
 /* ThreadX return value */
+v2x_service_t 						*v2x_service = NULL;
 
   (void) command;
   
@@ -163,6 +163,8 @@ int cli_v2x_link_service_create( struct cli_def *cli, const char *command, char 
 			cli_print( cli, "Remote V2X service create: %s\n", atlk_rc_to_str(rc));
 			return atlk_error(rc);
 		}
+printf("v2x_service: %p\n",v2x_service);
+
 #else 
 		cli_print( cli, "Remote V2X service is not avaliable" );
 #endif		
@@ -208,6 +210,7 @@ int cli_v2x_link_service_delete( struct cli_def *cli, const char *command, char 
   atlk_rc_t             rc    = ATLK_OK;
 
 
+v2x_service_t 						*v2x_service = NULL;
 
 
 
@@ -243,13 +246,15 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
 {
 	v2x_socket_config_t	link_sk_params = V2X_SOCKET_CONFIG_INIT;
 
+v2x_service_t 						*v2x_service = NULL;
+wdm_service_t                                            *wdm_service_ptr = NULL;
 
 
 
   int32_t               i     = 0;
   atlk_rc_t             rc    = ATLK_OK;
   char                  str_data[256] = "";
-  size_t index;
+ // size_t index;
   /* get user context */
   user_context *myctx = (user_context *) cli_get_context(cli);
   (void) command;
@@ -259,25 +264,13 @@ int cli_v2x_link_socket_create( struct cli_def *cli, const char *command, char *
  
 
   CHECK_NUM_ARGS /* make sure all parameter are there */
-  
-rc = wdm_service_get(NULL, &wdm_service_ptr);
-    if (atlk_error(rc)) {
-      cli_print( cli, "ERROR :wdm_service_get fiailed: %s\n", atlk_rc_to_str(rc));
-      return EXIT_FAILURE;
-    }
-   cli_print( cli, "wdm_service: %p",wdm_service_ptr);
- /* Enable WDM interfaces */
-  for (index = 0; index < 2; index++) {
-    rc = wdm_interface_state_set(wdm_service_ptr,
-                                 index,
-                                 WDM_INTERFACE_STATE_ENABLED);
-    if(atlk_error(rc)) {
-      printf("Could not enable interface %zu\n", index);
-    }
-    else {
-      printf("Interface %zu enabled\n", index);
-    }
+
+ rc = wdm_service_get(NULL, &wdm_service_ptr);
+  if (atlk_error(rc)) {
+    (void)fprintf(stderr, "wdm_service_get failed: %d\n", rc);
+    return EXIT_FAILURE;
   }
+
 
  // get v2x service
   
@@ -286,9 +279,10 @@ rc = wdm_service_get(NULL, &wdm_service_ptr);
       cli_print( cli, "ERROR :v2x_service_get fiailed: %s\n", atlk_rc_to_str(rc));
       return EXIT_FAILURE;
     }
+
   GET_INT("-if_idx", link_sk_params.if_index, i, "Specify interface index");
-  if ( link_sk_params.if_index < 1 || link_sk_params.if_index > 4) {
-    cli_print(cli, "ERROR : if_index is not optional and must be in range of 1-4");
+  if ( (link_sk_params.if_index != 0 && link_sk_params.if_index != 1) || link_sk_params.if_index > 1) {
+    cli_print(cli, "ERROR : if_index is not optional and must be in range of 0-1");
     return CLI_ERROR;
   }
   
@@ -338,6 +332,24 @@ rc = wdm_service_get(NULL, &wdm_service_ptr);
     }
   }
 
+    if (if_index_state[link_sk_params.if_index] == 0)
+    {
+	rc = wdm_interface_state_set(wdm_service_ptr,
+                                 link_sk_params.if_index,
+                                 WDM_INTERFACE_STATE_ENABLED);
+	 if(atlk_error(rc)) {
+    	  printf("Could not enable interface %d\n", link_sk_params.if_index);
+   	 }
+   	 else {
+     	  printf("Interface %d enabled\n", link_sk_params.if_index);
+  	 }
+    }
+    else
+    {
+	printf("interface already active\n");
+    }
+    if_index_state[link_sk_params.if_index] = 1;
+ 
   rc = v2x_socket_create(v2x_service, &myctx->v2x_socket, &link_sk_params);
   if (atlk_error(rc)) {
     cli_print(cli, "ERROR : v2x_socket_create: %s\n", atlk_rc_to_str(rc));
@@ -469,6 +481,8 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 	msg_size = (size_t) (strlen(tx_data) / 2);
 	cli_print(cli, "cli_v2x_link_tx - convert hexstr to buffer, msg_size = %d, strlen(tx_data) = %d\n", (int) msg_size, (int)strlen(tx_data) );
   rc = hexstr_to_bytes_arr(tx_data, strlen(tx_data), hex_arr, &msg_size);
+	cli_print(cli,"rc: %d",(int)rc);
+
 	//cli_print(cli, " rc = %d, data : %s, msg_size : %d, hex_arr : 0x%02x, hex_arr : 0x%02x, hex_arr : 0x%02x ,hex_arr : 0x%02x  ",rc, tx_data,(int)msg_size,hex_arr[0],hex_arr[1],hex_arr[2],hex_arr[3]);
   if (atlk_error(rc)) {
     cli_print(cli, "ERROR : cli_v2x_link_tx - cannot convert hexstr to buffer, error= %s\n", atlk_rc_to_str(rc));
@@ -479,7 +493,7 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 	  	hex_arr[1] = i;
 	  	hex_arr[0] = (i & 0xff00)>>8;
 		rc = v2x_send(myctx->v2x_socket, hex_arr, msg_size, &link_sk_tx_param, NULL);
-		
+		//cli_print(cli,"rc: %d frame id: %d",(int)rc,i);
 		//int j = msg_size;
 		
 		//cli_print(cli, "data :");
@@ -729,6 +743,8 @@ int cli_v2x_netif_profile_set( struct cli_def *cli, const char *command, char *a
 
 int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, char *argv[], int argc)
 {
+v2x_service_t 						*v2x_service = NULL;
+wdm_service_t                                            *wdm_service_ptr = NULL;
 
   v2x_dot4_channel_start_request_t request;
  // atlk_wait_t wait;
@@ -739,7 +755,6 @@ int cli_v2x_dot4_channel_start_req(struct cli_def *cli, const char *command, cha
   int32_t       chan_id  = 0;
   int32_t		  slot_id  = 0;
   int32_t		  imm_acc  = 0;
-wdm_service_t *wdm_service_ptr = NULL;
 
   (void) command;
 
@@ -750,6 +765,8 @@ wdm_service_t *wdm_service_ptr = NULL;
       cli_print( cli, "ERROR :v2x_service_get failed: %s\n", atlk_rc_to_str(rc));
       return EXIT_FAILURE;
     }
+ 
+
 
   /* get user context */
   //user_context *myctx = (user_context *) cli_get_context(cli);
@@ -780,16 +797,25 @@ wdm_service_t *wdm_service_ptr = NULL;
     (void)fprintf(stderr, "wdm_service_get failed: %d\n", rc);
     return EXIT_FAILURE;
   }
-
- rc = wdm_interface_state_set(wdm_service_ptr,
-                                 0,
+    if (if_index_state[if_index] == 0){
+	rc = wdm_interface_state_set(wdm_service_ptr,
+                                 request.if_index,
                                  WDM_INTERFACE_STATE_ENABLED);
-    if(atlk_error(rc)) {
-      printf("Could not enable interface %d\n", 0);
+	 if(atlk_error(rc)) {
+    	  printf("Could not enable interface %d\n", request.if_index);
+   	 }
+   	 else {
+     	  printf("Interface %d enabled\n", request.if_index);
+  	 }
     }
-    else {
-      printf("Interface %d enabled\n", 0);
+    else
+    {
+	printf("interface already active\n");
     }
+    if_index_state[if_index] = 1;	
+    
+/* Needed for SECTON device */
+  //usleep(1000000);
 
      rc = v2x_dot4_channel_start(v2x_service, &request, &atlk_wait_forever);
      if (rc != ATLK_OK) {
@@ -802,10 +828,11 @@ wdm_service_t *wdm_service_ptr = NULL;
 
 int cli_v2x_dot4_channel_end_req(struct cli_def *cli, const char *command, char *argv[], int argc)
 {
+v2x_service_t 						*v2x_service = NULL;
 
 	v2x_dot4_channel_end_request_t request;
 wdm_service_t *wdm_service_ptr = NULL;
-	atlk_wait_t wait;
+//	atlk_wait_t wait;
     int i = 0;
 	atlk_rc_t      rc = ATLK_OK;
 	int32_t       if_index = 1;
@@ -834,13 +861,21 @@ wdm_service_t *wdm_service_ptr = NULL;
 	  request.channel_id.op_class = op_class;
 	  request.channel_id.channel_num = ch_id;
 
+ // get v2x service
+  
+    rc = v2x_service_get(NULL, &v2x_service);
+    if (atlk_error(rc)) {
+      cli_print( cli, "ERROR :v2x_service_get failed: %s\n", atlk_rc_to_str(rc));
+      return EXIT_FAILURE;
+    }
+
 
  rc = wdm_service_get(NULL, &wdm_service_ptr);
   if (atlk_error(rc)) {
     (void)fprintf(stderr, "wdm_service_get failed: %d\n", rc);
     return EXIT_FAILURE;
   }
-     rc = v2x_dot4_channel_end(v2x_service, &request, &wait);
+     rc = v2x_dot4_channel_end(v2x_service, &request, &atlk_wait_forever);
      if (rc != ATLK_OK) {
     	 cli_print(cli, "ERROR : v2x channel request : %s\n", atlk_rc_to_str(rc));
     	 return CLI_ERROR;
@@ -967,6 +1002,7 @@ int cli_v2x_cmd_sdk_version(struct cli_def *cli,
 #ifdef __THREADX__
 int cli_v2x_wave6_init(struct cli_def *cli, const char *command, char *argv[], int argc)
 {
+v2x_service_t 						*v2x_service = NULL;
 
   /* NetX return value */
   ULONG nrv = NX_SUCCESS;
