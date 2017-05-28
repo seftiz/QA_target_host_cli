@@ -755,6 +755,7 @@ wdm_service_t                                            *wdm_service_ptr = NULL
   int32_t       chan_id  = 0;
   int32_t		  slot_id  = 0;
   int32_t		  imm_acc  = 0;
+wdm_service_t *wdm_service_ptr = NULL;
 
   (void) command;
 
