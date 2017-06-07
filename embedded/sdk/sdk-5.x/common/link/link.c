@@ -28,10 +28,9 @@
 #include "link.h"
 #include "../../linux/remote/remote.h"
 
-//#include "/media/sf_C_DRIVE/temp/060617/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
-//#include "/media/sf_C_DRIVE/temp/060617/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm_service.h"
 #include "atlk/wdm.h"
 #include "atlk/wdm_service.h"
+
 
 //trying
 typedef struct {
@@ -538,13 +537,14 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 												timeout  		= 50000,
 												print_frms	=	1, 
 												rx_timeout	=	0;
+char          str_data[200] = "";
 	char 									buf[MAX_WAVE_FRAME_SIZE] = {0};
 									
 	struct timeval start, current, session_start, current_cycle;
   (void) command;
   /* get user context */
   user_context *myctx = (user_context *) cli_get_context(cli);
-  IS_HELP_ARG("link socket rx [-frames 1- ...] [-timeout_ms (0-1e6) -print (0|1)] [op_class 0-4] [ch_idx (IEEE1609.4)] ");
+  IS_HELP_ARG("link socket rx [-frames 1- ...] [-timeout_ms (0-1e6) -print (0|1)] [-op_class 0-4] [-ch_idx (IEEE1609.4)] [-time_slot 1-3 ");
   CHECK_NUM_ARGS /* make sure all parameter are there */
     
   for ( i = 0 ; i < argc; i += 2 ) {
@@ -554,6 +554,13 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
     GET_INT("-op_class", link_sk_rx.channel_id.op_class, i, "Specify operational class");
     GET_INT("-ch_idx", link_sk_rx.channel_id.channel_num, i, "Sets the channel number (band) to be used");
 
+	GET_STRING("-source_addr", str_data, i, "Set source mac address"); 
+	GET_STRING("-dest_addr", str_data, i, "Set destination mac address"); 
+	GET_INT("-user_priority", link_sk_rx.user_priority, i, "Specify the frame user priority, range 0-7");
+	GET_INT("-data_rate", link_sk_rx.datarate, i, "Specify the frame user priority, range 0:7");
+	GET_INT("-power_dbm8", link_sk_rx.power_dbm8, i, "Sets the mac interface to transmit from");
+	GET_INT("-time_slot", link_sk_rx.channel_id.time_slot, i, "which alternating access is requested");
+  	
   } 
   i = 0;
   cli_print( cli, "Note : System will wait for %d frames or timeout %d", (int) frames, (int) timeout );
@@ -618,7 +625,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 		if ( print_frms ) { 
 			int j = 0;
 			const char *msg = buf;
-			char* buf_str = (char*) malloc (2 * size + 1);
+			char* buf_str = (char*) malloc (sizeof(char) * sizeof(buf) + 1);
 			char* buf_ptr = buf_str;
 			
 			for (j = 0; j < (int) size; j++) {
@@ -628,13 +635,14 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 			*(buf_ptr + 1) = '\0';
 			//added for chs tests
 				if (link_sk_rx.channel_id.channel_num != 0){
-				cli_print( cli,   "Frame: %d, ch_num: %d, time_slot: %d  timestamp: %" PRIu64 "\n",
-				 (int) ++i,link_sk_rx.channel_id.channel_num ,link_sk_rx.channel_id.time_slot,link_sk_rx.receive_time_us);
+				cli_print( cli,   "Frame: %d, ch_num: %d, power_dbm8 %d ,time_slot: %d  timestamp: %" PRIu64 "\n",
+				 (int) ++i,link_sk_rx.channel_id.channel_num ,link_sk_rx.power_dbm8,link_sk_rx.channel_id.time_slot,link_sk_rx.receive_time_us);
 			
 				}
 			//till here
-
-		cli_print( cli,   "Frame: %d, SA : %02x:%02x:%02x:%02x:%02x:%02x, DA : %02x:%02x:%02x:%02x:%02x:%02x\r\nData %s\r\n" /*Power : %.2f\r\n"*/,
+		else
+		{
+		cli_print( cli,   "Frame: %d, SA : %02x:%02x:%02x:%02x:%02x:%02x, DA : %02x:%02x:%02x:%02x:%02x:%02x\r\n" /*Power : %.2f\r\n"*/,
 				 (int) ++i,
 				 /* SA */
 				 link_sk_rx.source_address.octets[0], link_sk_rx.source_address.octets[1],
@@ -643,9 +651,10 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 				 /* DA */
 				 link_sk_rx.dest_address.octets[0], link_sk_rx.dest_address.octets[1],
 				 link_sk_rx.dest_address.octets[2], link_sk_rx.dest_address.octets[3],
-				 link_sk_rx.dest_address.octets[4], link_sk_rx.dest_address.octets[5],
-				 buf_str/*,
+				 link_sk_rx.dest_address.octets[4], link_sk_rx.dest_address.octets[5]
+				 /*,
 				 link_sk_rx.power_dbm8 == V2X_POWER_DBM8_NA ? NAN : (double)link_sk_rx.power_dbm8 / 8.0 */);
+			}
 				 
 			free(buf_str);
 		}

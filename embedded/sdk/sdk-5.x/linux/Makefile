@@ -17,8 +17,7 @@ APPS := ../apps
 ATLK_SDK_LIB_DIR := $(ATLK_SDK_DIR)/lib
 
 # Autotalks include directory
-ATLK_SDK_INCLUDE_DIR := $(ATLK_SDK_DIR)/include 
-ATLK_SDK_INCLUDE_ATLK_DIR := $(ATLK_SDK_DIR)/include/atlk
+ATLK_SDK_INCLUDE_DIR := $(ATLK_SDK_DIR)/include
 
 # Autotalks library name
 ATLK_SDK_LIB := atlkremote_linux_u
