@@ -28,9 +28,10 @@
 #include "link.h"
 #include "../../linux/remote/remote.h"
 
-#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
-#include "/media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm_service.h"
-
+//#include "/media/sf_C_DRIVE/temp/060617/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm.h"
+//#include "/media/sf_C_DRIVE/temp/060617/dbg-secton-sdk-5.3.0-alpha2/include/atlk/wdm_service.h"
+#include "atlk/wdm.h"
+#include "atlk/wdm_service.h"
 
 //trying
 typedef struct {
@@ -755,7 +756,7 @@ wdm_service_t                                            *wdm_service_ptr = NULL
   int32_t       chan_id  = 0;
   int32_t		  slot_id  = 0;
   int32_t		  imm_acc  = 0;
-wdm_service_t *wdm_service_ptr = NULL;
+//wdm_service_t *wdm_service_ptr = NULL;
 
   (void) command;
 

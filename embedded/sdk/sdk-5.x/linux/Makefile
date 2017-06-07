@@ -5,7 +5,7 @@
 #ATLK_SDK_DIR := /media/sf_ATE_proj/dbg-secton-sdk-5.3.0-alpha2
 #ATLK_SDK_DIR := /media/sf_ATE_proj/dbg-secton-sdk-5.2.0-beta3
 
-ATLK_SDK_DIR := /media/sf_fw_release/dbg-secton-sdk-5.3.0-alpha2
+ATLK_SDK_DIR := /media/sf_C_DRIVE/temp/060617/dbg-secton-sdk-5.3.0-alpha2
 #ATLK_SDK_DIR := /docs/ATE/fw_releases/craton2-sdk-5.3.0-alpha1
 
 
@@ -17,7 +17,8 @@ APPS := ../apps
 ATLK_SDK_LIB_DIR := $(ATLK_SDK_DIR)/lib
 
 # Autotalks include directory
-ATLK_SDK_INCLUDE_DIR := $(ATLK_SDK_DIR)/include
+ATLK_SDK_INCLUDE_DIR := $(ATLK_SDK_DIR)/include 
+ATLK_SDK_INCLUDE_ATLK_DIR := $(ATLK_SDK_DIR)/include/atlk
 
 # Autotalks library name
 ATLK_SDK_LIB := atlkremote_linux_u
