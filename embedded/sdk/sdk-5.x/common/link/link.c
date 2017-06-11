@@ -23,6 +23,8 @@
 #include <craton/net.h>
 #include <craton/wave_ipv6.h>
 #endif
+#include <pthread.h>
+#include <signal.h>
 
 
 #include "link.h"
@@ -39,6 +41,53 @@ typedef struct {
   v2x_service_t *v2x_service_ptr;
   int32_t ddm_init;
 } diag_cli_services_t;
+
+
+#define MAX_WAVE_FRAME_SIZE 3000
+#define MAX_V2X_THREADS 20
+
+struct thread_parameter{
+  int32_t frames;
+  user_context *myctx;
+  char buf[MAX_WAVE_FRAME_SIZE];
+  int32_t cycle_timeout;
+  int32_t rx_timeout;
+  int32_t timeout; 
+  int32_t print_frms;
+  int32_t i;
+  struct timeval start;
+  struct timeval current_cycle;
+  struct timeval session_start;
+  struct cli_def *cli;
+  v2x_receive_params_t 	link_sk_rx;
+  struct timeval current;
+  char cli_name[256];
+} ;
+
+struct thread_tx_parameters{
+  int32_t num_frames;
+  uint8_t hex_arr[MAX_TX_MSG_LEN / 2];
+  user_context *myctx;
+  v2x_send_params_t link_sk_tx_param;
+  struct cli_def *cli;
+  int32_t rate_hz;
+  size_t msg_size;
+  char cli_name[256];
+};
+
+static pthread_t v2x_tx_thread[MAX_V2X_THREADS];
+static pthread_t v2x_rx_thread[MAX_V2X_THREADS];
+//static pthread_t v2x_tx_thread;
+//static pthread_t v2x_rx_thread;
+struct thread_tx_parameters *thread_parameters_tx[MAX_V2X_THREADS];
+struct thread_parameter *thread_parameters_rx[MAX_V2X_THREADS];
+//struct thread_tx_parameters *thread_parameters_tx
+//struct thread_parameter *thread_parameters_rx
+static int tx_thread_num = 0;
+static int rx_thread_num = 0;
+static int calloc_flag_tx = 0;
+static int calloc_flag_rx = 0;
+
 //till here
 
 static int if_index_state[2] = {0,0};
@@ -259,7 +308,7 @@ wdm_service_t                                            *wdm_service_ptr = NULL
   user_context *myctx = (user_context *) cli_get_context(cli);
   (void) command;
   
-  IS_HELP_ARG("link socket create -if_idx 1|2 [-frame_type data|vsa] [-protocol_id 0xXXXX|0xXXXXXXXXXX]")
+  IS_HELP_ARG("link socket create -if_idx 0|1 [-frame_type data|vsa] [-protocol_id 0xXXXX|0xXXXXXXXXXX]")
 
  
 
@@ -400,6 +449,9 @@ error:
   return atlk_error(rc);
 }
 
+static void *v2x_tx_thread_entry(void *arg);
+
+
 int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int argc )
 {
   int32_t       num_frames = 1;     /* total num frames to send */
@@ -418,17 +470,18 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
   (void) command;
 
   int i = 0;
+
+  char sk[256] = "same";
+  char cli_name[256] = "none";
+
   
   /* get user context */
   user_context *myctx = (user_context *) cli_get_context(cli);
   
-  IS_HELP_ARG("link socket tx [-frames 1- ...] [-rate_hz 1 - ...] [-tx_data 'ddddd' | -payload_len 100] [-use_nav 0|1][-dest_address XX:XX:XX:XX:XX:XX] [-data_rate 3|4.5|6|9|12|18|24|27|36|48|108 MBPS] [-user_prio 0-7] [-power_dbm8 -20-20] [op_class 0-4] [ch_idx (IEEE1609.4)] ");
+  IS_HELP_ARG("link socket tx [-frames 1- ...] [-rate_hz 1 - ...] [-tx_data 'ddddd' | -payload_len 100] [-use_nav 0|1][-dest_address XX:XX:XX:XX:XX:XX] [-data_rate 3|4.5|6|9|12|18|24|27|36|48|108 MBPS] [-user_prio 0-7] [-power_dbm8 -20-20] [op_class 0-4] [ch_idx (IEEE1609.4)] [-sk same/different]");
 
   CHECK_NUM_ARGS /* make sure all parameter are there */
-  /*
-  link_sk_tx_param.datarate = 0;
-  // link_sk_tx_param.power_dbm8 = -80;
-  */
+  
   for (i = 0; i < argc; i += 2) {
     GET_INT("-frames", num_frames, i, "Specify the number of frames to send");
     GET_INT("-rate_hz", rate_hz, i, "Specify the rate of frames to send");
@@ -440,6 +493,8 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
     GET_INT("-op_class", link_sk_tx_param.channel_id.op_class, i, "Specify operational class");
     GET_INT("-time_slot", link_sk_tx_param.channel_id.time_slot, i, "which alternating access is requested");
     GET_INT("-ch_idx", link_sk_tx_param.channel_id.channel_num, i, "Sets the channel number (band) to be used");
+    GET_STRING("-sk", sk , i, "same/different , same - normal , different - thread function");
+    GET_STRING("-cli_name", cli_name , i, "cli name");
   } 
   
   // Convert mac address xx:xx:xx:xx:xx:xx to array of bytes
@@ -449,12 +504,7 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
       link_sk_tx_param.dest_address.octets[i] = hex_to_byte(pos);
       pos += 3;
     }
-    /* For debug:
-    printf("cli_v2x_link_tx : mac address = 0x");
-    for (i = 0; i < 6; i++)
-      printf("%02x", link_sk_tx_param.dest_address.octets[i]);
-    printf("\n");
-    */
+    
   }
 
   GET_STRING_VALUE("-tx_data", tx_data, "Define data to send over the link layer");
@@ -481,29 +531,62 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 	msg_size = (size_t) (strlen(tx_data) / 2);
 	cli_print(cli, "cli_v2x_link_tx - convert hexstr to buffer, msg_size = %d, strlen(tx_data) = %d\n", (int) msg_size, (int)strlen(tx_data) );
   rc = hexstr_to_bytes_arr(tx_data, strlen(tx_data), hex_arr, &msg_size);
-	cli_print(cli,"rc: %d",(int)rc);
+	
 
-	//cli_print(cli, " rc = %d, data : %s, msg_size : %d, hex_arr : 0x%02x, hex_arr : 0x%02x, hex_arr : 0x%02x ,hex_arr : 0x%02x  ",rc, tx_data,(int)msg_size,hex_arr[0],hex_arr[1],hex_arr[2],hex_arr[3]);
+	
   if (atlk_error(rc)) {
     cli_print(cli, "ERROR : cli_v2x_link_tx - cannot convert hexstr to buffer, error= %s\n", atlk_rc_to_str(rc));
     goto error;
   }
-  
+
+
+if (!strcmp(sk,"different"))
+  {
+	int rv, j;
+	
+	tx_thread_num ++;
+	
+
+	int cal;
+	if (!calloc_flag_tx)
+	{
+		for(cal = 0 ; cal <20 ; cal ++)
+		{
+			thread_parameters_tx[cal] = (struct thread_tx_parameters *)calloc(1, sizeof(struct thread_tx_parameters));
+		}
+			calloc_flag_tx = 1;
+	}
+	thread_parameters_tx[tx_thread_num]->num_frames = num_frames;
+	for (j = 0 ; j < (MAX_TX_MSG_LEN / 2) ; j++)
+		thread_parameters_tx[tx_thread_num]->hex_arr[j] = hex_arr[j];
+	thread_parameters_tx[tx_thread_num]->myctx = myctx;
+	thread_parameters_tx[tx_thread_num]->msg_size = msg_size;
+	thread_parameters_tx[tx_thread_num]->link_sk_tx_param = link_sk_tx_param;
+	thread_parameters_tx[tx_thread_num]->cli = cli;	
+	thread_parameters_tx[tx_thread_num]->rate_hz = rate_hz;
+	strcpy(thread_parameters_tx[tx_thread_num]->cli_name,cli_name);	
+
+	rv = pthread_create(&(v2x_tx_thread[tx_thread_num]),
+                        NULL,
+                        v2x_tx_thread_entry,
+                        (void *)thread_parameters_tx[tx_thread_num]);
+	if (rv != 0) {
+	cli_print(cli, "pthread_create failed: %d\n", rv);
+        return EXIT_FAILURE;
+        }
+
+	
+
+  }
+else
+  { 
+	
+
   for (i = 0; i < num_frames; ++i) {
 	  	hex_arr[1] = i;
 	  	hex_arr[0] = (i & 0xff00)>>8;
 		rc = v2x_send(myctx->v2x_socket, hex_arr, msg_size, &link_sk_tx_param, NULL);
-		//cli_print(cli,"rc: %d frame id: %d",(int)rc,i);
-		//int j = msg_size;
-		
-		//cli_print(cli, "data :");
-
-		//while (j){
-		//j--;
-		
-		//cli_print(cli, "%02x\n", hex_arr[j] );
-		//}
-		
+						
 		if ( atlk_error(rc) ) {
 			cli_print(cli, "ERROR : v2x_send: %s\n", atlk_rc_to_str(rc));
 			goto error;
@@ -518,12 +601,75 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 			}
 		}
 	}
+	
+
+  }
   
 error:
   return rc;
 }
 
-#define MAX_WAVE_FRAME_SIZE 3000
+static void *v2x_tx_thread_entry(void *arg)
+{
+
+	int i;
+	atlk_rc_t      rc = ATLK_OK;
+  	struct thread_tx_parameters *thread_parameters = arg;
+
+	
+
+	for (i = 0; i < thread_parameters->num_frames; ++i) {
+	  	thread_parameters->hex_arr[1] = i;
+	  	thread_parameters->hex_arr[0] = (i & 0xff00)>>8;
+		rc = v2x_send(thread_parameters->myctx->v2x_socket, thread_parameters->hex_arr, thread_parameters->msg_size, &thread_parameters->link_sk_tx_param, NULL);
+		
+						
+		if ( atlk_error(rc) ) {
+			cli_print(thread_parameters->cli, "ERROR : v2x_send: %s\n", atlk_rc_to_str(rc));
+			goto error;
+		}
+		else {
+			thread_parameters->myctx->cntrs.link_tx_packets ++;
+			m_link_tx_packets ++;		
+			/* Sleep 100 ms between transmissions */
+			if ( (thread_parameters->num_frames >= 1) && (thread_parameters->rate_hz >= 1) ){
+				int sleep_time_uSec = (1e6 / thread_parameters->rate_hz );
+				usleep( sleep_time_uSec );
+			}
+		}
+	}
+	error:
+  	return NULL;
+}
+
+int cli_v2x_link_tx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc)
+ {
+	 
+	 (void)command;
+	 (void)argv;
+	 (void)argc;
+	int s,i;
+			
+	
+	for(i=0; i>10; i++)
+	{	
+		s = pthread_kill(v2x_tx_thread[i] , SIGUSR1);                                     
+ 		if ( s <  0)                                                              
+    			cli_print(cli,"pthread_kill failed\n");
+		else  
+			cli_print(cli, "link tx thread terminated\n");
+		
+		free(thread_parameters_tx[i]);
+	}
+	return ATLK_OK;
+ }
+
+
+
+
+
+static void *v2x_rx_thread_entry(void *arg);
+
 int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int argc )
 {
  
@@ -542,9 +688,14 @@ char          str_data[200] = "";
 									
 	struct timeval start, current, session_start, current_cycle;
   (void) command;
+
+	char sk[256] = "same";
+	 char cli_name[256] = "none";
+
+
   /* get user context */
   user_context *myctx = (user_context *) cli_get_context(cli);
-  IS_HELP_ARG("link socket rx [-frames 1- ...] [-timeout_ms (0-1e6) -print (0|1)] [-op_class 0-4] [-ch_idx (IEEE1609.4)] [-time_slot 1-3 ");
+  IS_HELP_ARG("link socket rx [-frames 1- ...] [-timeout_ms (0-1e6) -print (0|1)] [op_class 0-4] [ch_idx (IEEE1609.4)] [-sk same/different]");
   CHECK_NUM_ARGS /* make sure all parameter are there */
     
   for ( i = 0 ; i < argc; i += 2 ) {
@@ -560,7 +711,8 @@ char          str_data[200] = "";
 	GET_INT("-data_rate", link_sk_rx.datarate, i, "Specify the frame user priority, range 0:7");
 	GET_INT("-power_dbm8", link_sk_rx.power_dbm8, i, "Sets the mac interface to transmit from");
 	GET_INT("-time_slot", link_sk_rx.channel_id.time_slot, i, "which alternating access is requested");
-  	
+    GET_STRING("-sk", sk , i, "same/different , same - normal , different - thread function");
+    GET_STRING("-cli_name", cli_name , i, "cli name");
   } 
   i = 0;
   cli_print( cli, "Note : System will wait for %d frames or timeout %d", (int) frames, (int) timeout );
@@ -568,6 +720,54 @@ char          str_data[200] = "";
 	myctx->cntrs.link_rx_packets = 0;
 	
   gettimeofday (&session_start, NULL);
+
+  if (!strcmp(sk,"different"))
+  {
+	int rv;
+	
+	rx_thread_num ++;
+	
+	int cal;
+	if(!calloc_flag_rx)
+	{
+		for(cal = 0 ; cal <20 ; cal ++)
+		{
+			thread_parameters_rx[cal] = (struct thread_parameter *)calloc(1, sizeof(struct thread_parameter));
+		}
+		calloc_flag_rx = 1;
+		
+	}
+	
+	thread_parameters_rx[rx_thread_num]->frames = frames;	
+	thread_parameters_rx[rx_thread_num]->myctx = myctx;	
+	strcpy(thread_parameters_rx[rx_thread_num]->buf,buf);
+	thread_parameters_rx[rx_thread_num]->cycle_timeout = cycle_timeout;
+	thread_parameters_rx[rx_thread_num]->rx_timeout = rx_timeout;
+	thread_parameters_rx[rx_thread_num]->start = start;
+	thread_parameters_rx[rx_thread_num]->current_cycle = current_cycle;
+	thread_parameters_rx[rx_thread_num]->session_start = session_start;
+	thread_parameters_rx[rx_thread_num]->cli = cli;
+	thread_parameters_rx[rx_thread_num]->link_sk_rx = link_sk_rx;
+	thread_parameters_rx[rx_thread_num]->timeout = timeout;
+	thread_parameters_rx[rx_thread_num]->current = current;
+	thread_parameters_rx[rx_thread_num]->print_frms = print_frms;
+	thread_parameters_rx[rx_thread_num]->i = i;
+	strcpy(thread_parameters_rx[rx_thread_num]->cli_name,cli_name);
+	
+	
+	rv = pthread_create(&(v2x_rx_thread[rx_thread_num]),
+                        NULL,
+                        v2x_rx_thread_entry,
+                        (void *)thread_parameters_rx[rx_thread_num]);
+	if (rv != 0) {
+	cli_print(cli, "pthread_create failed: %d\n", rv);
+        return EXIT_FAILURE;
+        }
+
+	
+  }
+  else
+  {	 
   while ( frames-- ) {
 
 		size_t size = sizeof(buf);
@@ -588,7 +788,7 @@ char          str_data[200] = "";
 				cli_print(cli, "ERROR : rx session timed out:\n");
 				goto error;
 		    }
-			//cli_print(cli, "v2x_socket : %p\n",myctx->v2x_socket );
+			
 
 			rc = v2x_receive(myctx->v2x_socket, buf, &size, &link_sk_rx, NULL);
 			if ( (rc == ATLK_E_TIMEOUT) || (rc == ATLK_E_NOT_READY)||(rc == ATLK_E_EMPTY)) {
@@ -663,6 +863,140 @@ char          str_data[200] = "";
 error:
   return atlk_error(rc);
 }
+	return rc;
+}
+
+
+static void *
+v2x_rx_thread_entry(void *arg)
+{
+  atlk_rc_t      rc = ATLK_OK;
+  struct thread_parameter *thread_parameters = NULL;
+  thread_parameters = (struct thread_parameter *)arg;
+  int32_t frames = thread_parameters->frames;  
+  
+  while ( frames ) {
+
+    frames = frames - 1;
+
+    size_t size = sizeof(thread_parameters->buf);
+
+    memset( thread_parameters->buf, 0, sizeof(thread_parameters->buf) );
+    /* f_timeout is only for first frame timeout, */
+    if ( thread_parameters->myctx->cntrs.link_rx_packets ) {
+      thread_parameters->cycle_timeout = 5000;
+    }
+		
+    thread_parameters->rx_timeout = 0;
+    gettimeofday (&thread_parameters->start, NULL);	
+		
+    do {
+      gettimeofday (&thread_parameters->current_cycle, NULL);
+      double elapsed_from_session_start = (thread_parameters->current_cycle.tv_sec - thread_parameters->session_start.tv_sec) * 1000.0;
+      if (elapsed_from_session_start > thread_parameters->timeout) {
+	cli_print(thread_parameters->cli, "ERROR : rx session timed out:\n");
+	goto error;
+      }
+      
+
+      rc = v2x_receive(thread_parameters->myctx->v2x_socket, thread_parameters->buf, &size, &thread_parameters->link_sk_rx, NULL);
+      
+      if ( (rc == ATLK_E_TIMEOUT) || (rc == ATLK_E_NOT_READY)||(rc == ATLK_E_EMPTY)) {
+	gettimeofday (&thread_parameters->current, NULL);	
+	double elapsedTime = (thread_parameters->current.tv_sec - thread_parameters->start.tv_sec) * 1000.0;
+	if ( (elapsedTime > thread_parameters->cycle_timeout) && (rc != ATLK_E_NOT_READY)) {
+	  thread_parameters->rx_timeout = 1;
+	}
+	else {
+	  usleep( 1000 );
+	}
+      }
+      else if ((rc == ATLK_OK)) {
+	thread_parameters->rx_timeout = 2;
+      }
+      else if (rc != ATLK_OK && rc != ATLK_E_NOT_READY) {
+	thread_parameters->rx_timeout = 10 + rc;
+      }
+      
+    } while ( !thread_parameters->rx_timeout );
+		
+    if ( thread_parameters->rx_timeout == 1 ) {
+      cli_print(thread_parameters->cli, "ERROR : rx time out or not ready : %s\n", atlk_rc_to_str(rc));
+      goto error;
+    }
+    else if (thread_parameters->rx_timeout > 10) {
+      cli_print(thread_parameters->cli, "ERROR : %d, %s\n", rc, atlk_rc_to_str(rc) );
+      goto error;
+    }
+
+    thread_parameters->myctx->cntrs.link_rx_packets ++;
+    m_link_rx_packets ++;
+		
+    if ( thread_parameters->print_frms ) { 
+      int j = 0;
+      const char *msg = thread_parameters->buf;
+      char* buf_str = (char*) malloc (2 * size + 1);
+      char* buf_ptr = buf_str;
+			
+      for (j = 0; j < (int) size; j++) {
+	buf_ptr += sprintf(buf_ptr, "%02X", msg[j]);
+      }
+			
+      *(buf_ptr + 1) = '\0';
+      //added for chs tests
+      if (thread_parameters->link_sk_rx.channel_id.channel_num != 0){
+	cli_print( thread_parameters->cli,   "Frame: %d, ch_num: %d, time_slot: %d  timestamp: %" PRIu64 "\n",
+		   (int) ++thread_parameters->i,thread_parameters->link_sk_rx.channel_id.channel_num ,thread_parameters->link_sk_rx.channel_id.time_slot,thread_parameters->link_sk_rx.receive_time_us);
+			
+      }
+      //till here
+
+      cli_print( thread_parameters->cli,   "Frame: %d, SA : %02x:%02x:%02x:%02x:%02x:%02x, DA : %02x:%02x:%02x:%02x:%02x:%02x\r\nData %s\r\n" /*Power : %.2f\r\n"*/,
+		 (int) ++thread_parameters->i,
+		 /* SA */
+		 thread_parameters->link_sk_rx.source_address.octets[0], thread_parameters->link_sk_rx.source_address.octets[1],
+		 thread_parameters->link_sk_rx.source_address.octets[2], thread_parameters->link_sk_rx.source_address.octets[3],
+		 thread_parameters->link_sk_rx.source_address.octets[4], thread_parameters->link_sk_rx.source_address.octets[5],
+		 /* DA */
+		 thread_parameters->link_sk_rx.dest_address.octets[0], thread_parameters->link_sk_rx.dest_address.octets[1],
+		 thread_parameters->link_sk_rx.dest_address.octets[2], thread_parameters->link_sk_rx.dest_address.octets[3],
+		 thread_parameters->link_sk_rx.dest_address.octets[4], thread_parameters->link_sk_rx.dest_address.octets[5],
+				 buf_str/*,
+					  link_sk_rx.power_dbm8 == V2X_POWER_DBM8_NA ? NAN : (double)link_sk_rx.power_dbm8 / 8.0 */);
+				 
+      free(buf_str);
+    }
+ 
+  }
+   error:
+	return NULL;
+
+  return NULL;
+}
+
+int cli_v2x_link_rx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc)
+ {
+	 
+	 (void)command;
+	 (void)argv;
+	 (void)argc;
+	int s,i;
+			
+	
+	for(i=0; i>10; i++)
+	{
+		s = pthread_kill(v2x_rx_thread[i] , SIGUSR1);                                     
+ 		if ( s <  0)                                                              
+    			cli_print(cli,"pthread_kill failed\n");      
+	
+		else
+			cli_print(cli, "link tx thread terminated\n");
+
+		free(thread_parameters_rx[i]);
+	}
+	return ATLK_OK;
+ }
+
 
 int cli_v2x_get_link_socket_addr( struct cli_def *cli, const char *command, char *argv[], int argc ) 
 { 
@@ -740,6 +1074,9 @@ int cli_v2x_netif_profile_set( struct cli_def *cli, const char *command, char *a
   rc = v2x_netif_profile_set(v2x_service, 0, &netif_profile);
   if (atlk_error(rc)) {
     cli_print(cli, "v2x_netif_profile_set: %s\n", atlk_rc_to_str(rc));
+  }
+  else {
+    cli_print(cli, "rc : %d\n", rc);
   }
 	return rc;
 

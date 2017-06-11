@@ -21,10 +21,57 @@
 #include <atlk/v2x_service.h>
 #include <atlk/v2x.h>
 
+#define MAX_V2X_THREADS 20
+#define TX_THREAD_PRIORITY 40
+
 #include "link.h"
 #include "../../linux/remote/remote.h"
 
 static v2x_service_t 						*v2x_service = NULL;
+
+
+#define MAX_WAVE_FRAME_SIZE 3000
+#ifdef __THREADX__
+struct thread_parameter{
+  int32_t frames;
+  user_context *myctx;
+  char buf[MAX_WAVE_FRAME_SIZE];
+  int32_t cycle_timeout;
+  int32_t rx_timeout;
+  int32_t timeout; 
+  int32_t print_frms;
+  int32_t i;
+  struct timeval start;
+  struct timeval current_cycle;
+  struct timeval session_start;
+  struct cli_def *cli;
+  v2x_receive_params_t 	link_sk_rx;
+  struct timeval current;
+  TX_THREAD rx_thread;
+  uint8_t rxtx_thread_stack[0x1000];
+  char cli_name[256];
+} ;
+
+struct thread_tx_parameters{
+  int32_t num_frames;
+  uint8_t hex_arr[MAX_TX_MSG_LEN / 2];
+  user_context *myctx;
+  v2x_send_params_t link_sk_tx_param;
+  struct cli_def *cli;
+  int32_t rate_hz;
+  size_t msg_size;
+  TX_THREAD tx_thread;
+  uint8_t rxtx_thread_stack[0x1000];
+  char cli_name[256];
+};
+
+struct thread_tx_parameters tx_thread_parameters[MAX_V2X_THREADS];
+struct thread_parameter rx_thread_parameters[MAX_V2X_THREADS];
+static int tx_thread_num = 0;
+static int rx_thread_num = 0;
+
+#endif
+
 
 // /* End indication thread */
 // /* thread priority */
@@ -316,6 +363,9 @@ error:
   return atlk_error(rc);
 }
 
+#ifdef __THREADX__
+void v2x_tx_thread_entry(ULONG thread_input);
+#endif
 int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int argc )
 {
   int32_t       num_frames = 1;     /* total num frames to send */
@@ -334,17 +384,17 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
   (void) command;
 
   int i = 0;
+
+  char sk[256] = "same";
+   char cli_name[256] = "none";
   
   /* get user context */
   user_context *myctx = (user_context *) cli_get_context(cli);
   
-  IS_HELP_ARG("link socket tx [-frames 1- ...] [-rate_hz 1 - ...] [-tx_data 'ddddd' | -payload_len 100] [-use_nav 0|1][-dest_address XX:XX:XX:XX:XX:XX] [-data_rate 3|4.5|6|9|12|18|24|27|36|48|108 MBPS] [-user_prio 0-7] [-power_dbm8 -20-20] [op_class 0-4] [ch_idx (IEEE1609.4)] ");
+  IS_HELP_ARG("link socket tx [-frames 1- ...] [-rate_hz 1 - ...] [-tx_data 'ddddd' | -payload_len 100] [-use_nav 0|1][-dest_address XX:XX:XX:XX:XX:XX] [-data_rate 3|4.5|6|9|12|18|24|27|36|48|108 MBPS] [-user_prio 0-7] [-power_dbm8 -20-20] [op_class 0-4] [ch_idx (IEEE1609.4)] [-sk same/different]");
 
   CHECK_NUM_ARGS /* make sure all parameter are there */
-  /*
-  link_sk_tx_param.datarate = 0;
-  // link_sk_tx_param.power_dbm8 = -80;
-  */
+  
   for (i = 0; i < argc; i += 2) {
     GET_INT("-frames", num_frames, i, "Specify the number of frames to send");
     GET_INT("-rate_hz", rate_hz, i, "Specify the rate of frames to send");
@@ -355,6 +405,8 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
     GET_STRING("-dest_addr", str_data, i, "Set destination mac address"); 
     GET_INT("-op_class", link_sk_tx_param.channel_id.op_class, i, "Specify operational class");
     GET_INT("-ch_idx", link_sk_tx_param.channel_id.channel_num, i, "Sets the channel number (band) to be used");
+    GET_STRING("-sk", sk , i, "same/different , same - normal , different - thread function");
+    GET_STRING("-cli_name", cli_name , i, "cli name");
   } 
   
   // Convert mac address xx:xx:xx:xx:xx:xx to array of bytes
@@ -364,12 +416,7 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
       link_sk_tx_param.dest_address.octets[i] = hex_to_byte(pos);
       pos += 3;
     }
-    /* For debug:
-    printf("cli_v2x_link_tx : mac address = 0x");
-    for (i = 0; i < 6; i++)
-      printf("%02x", link_sk_tx_param.dest_address.octets[i]);
-    printf("\n");
-    */
+    
   }
 
   GET_STRING_VALUE("-tx_data", tx_data, "Define data to send over the link layer");
@@ -390,7 +437,7 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 	/*handle special case to support CHS TCs*/
   if ((strcmp(tx_data, "CHS") == 0) && (payload_len > 0)){
 	  memset((char *)tx_data, 0, sizeof(tx_data));
-	  //bulid_hex_str((char *)&(tx_data[0]), payload_len);
+	  
   }
 
 	msg_size = (size_t) (strlen(tx_data) / 2);
@@ -400,7 +447,54 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
     cli_print(cli, "ERROR : cli_v2x_link_tx - cannot convert hexstr to buffer, error= %s\n", atlk_rc_to_str(rc));
     goto error;
   }
+#ifdef __THREADX__
+if (!strcmp(sk,"different"))
+  {
+	 
 
+	tx_thread_num ++;
+
+	ULONG rv = TX_SUCCESS;
+	int j;
+	char thread_name[128];
+	ULONG param;
+	
+	tx_thread_parameters[tx_thread_num].num_frames = num_frames;
+	for (j = 0 ; j < (MAX_TX_MSG_LEN / 2) ; j++)
+		tx_thread_parameters[tx_thread_num].hex_arr[j] = hex_arr[j];
+	tx_thread_parameters[tx_thread_num].myctx = myctx;
+	tx_thread_parameters[tx_thread_num].msg_size = msg_size;
+	
+	memcpy(&tx_thread_parameters[tx_thread_num].link_sk_tx_param, &link_sk_tx_param, sizeof(tx_thread_parameters[tx_thread_num].link_sk_tx_param));
+	tx_thread_parameters[tx_thread_num].cli = cli;	
+	tx_thread_parameters[tx_thread_num].rate_hz = rate_hz;
+	strcpy(tx_thread_parameters[tx_thread_num].cli_name,cli_name);
+	
+
+	
+	strcpy(thread_name,"tx_thread");
+	param = (ULONG)&(tx_thread_parameters[tx_thread_num]);
+	
+	 
+	rv = tx_thread_create(&(tx_thread_parameters[tx_thread_num].tx_thread),thread_name,
+                        v2x_tx_thread_entry,param,
+                        tx_thread_parameters[tx_thread_num].rxtx_thread_stack,
+			sizeof(tx_thread_parameters[tx_thread_num].rxtx_thread_stack),
+			TX_THREAD_PRIORITY,
+			TX_THREAD_PRIORITY,
+			TX_NO_TIME_SLICE, TX_AUTO_START);
+	
+	if (rv != TX_SUCCESS){
+		cli_print(cli, "tx_thread_create: %s\n", atlk_rc_to_str(rv));
+		printf("tx_thread_create: %s\n", atlk_rc_to_str(rv));
+		goto error;
+	}
+
+		
+  }
+else
+  {
+#endif
   for (i = 0; i < num_frames; ++i) {
 	  	hex_arr[1] = i;
 	  	hex_arr[0] = (i & 0xff00)>>8;
@@ -419,11 +513,75 @@ int cli_v2x_link_tx( struct cli_def *cli, const char *command, char *argv[], int
 			}
 		}
 	}
+#ifdef __THREADX__
+   }
+#endif
 error:
   return rc;
 }
 
-#define MAX_WAVE_FRAME_SIZE 3000
+
+#ifdef __THREADX__
+void v2x_tx_thread_entry(ULONG thread_input)
+{	
+	int i;
+	atlk_rc_t      rc = ATLK_OK;
+  	struct thread_tx_parameters *thread_parameters = NULL;
+	thread_parameters = (struct thread_tx_parameters *)thread_input;
+
+	
+
+	for (i = 0; i < thread_parameters->num_frames; ++i) {
+	  	thread_parameters->hex_arr[1] = i;
+	  	thread_parameters->hex_arr[0] = (i & 0xff00)>>8;
+		rc = v2x_send(thread_parameters->myctx->v2x_socket, thread_parameters->hex_arr, thread_parameters->msg_size, &thread_parameters->link_sk_tx_param, NULL);
+		
+		
+						
+		if ( atlk_error(rc) ) {
+			
+			printf("ERROR : v2x_send: %s\n", atlk_rc_to_str(rc));
+			goto error;
+		}
+		else {
+			thread_parameters->myctx->cntrs.link_tx_packets ++;
+			m_link_tx_packets ++;		
+			/* Sleep 100 ms between transmissions */
+			if ( (thread_parameters->num_frames >= 1) && (thread_parameters->rate_hz >= 1) ){
+				int sleep_time_uSec = (1e6 / thread_parameters->rate_hz );
+				usleep( sleep_time_uSec );
+			}
+		}
+	}
+	
+	error:
+  	return;
+}
+
+int cli_v2x_link_tx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc)
+ {
+	 
+	 (void)command;
+	 (void)argv;
+	 (void)argc;
+	int i;
+
+	for(i=0; i>10; i++)
+	{	
+		cli_print(cli, "link tx thread terminated\n");
+		tx_thread_terminate(&(tx_thread_parameters[i].tx_thread));
+		tx_thread_delete(&(tx_thread_parameters[i].tx_thread));
+	}
+	
+	 	 
+	return ATLK_OK;
+ }
+
+#endif
+
+#ifdef __THREADX__
+void v2x_rx_thread_entry(ULONG thread_input);
+#endif
 int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int argc )
 {
  
@@ -441,9 +599,13 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 									
 	struct timeval start, current, session_start, current_cycle;
   (void) command;
+
+  char sk[256] = "same";
+  char cli_name[256]  = "none";
+
   /* get user context */
   user_context *myctx = (user_context *) cli_get_context(cli);
-  IS_HELP_ARG("link socket rx [-frames 1- ...] [-timeout_ms (0-1e6) -print (0|1)] [op_class 0-4] [ch_idx (IEEE1609.4)] ");
+  IS_HELP_ARG("link socket rx [-frames 1- ...] [-timeout_ms (0-1e6) -print (0|1)] [op_class 0-4] [ch_idx (IEEE1609.4)] [-sk same/different]");
   CHECK_NUM_ARGS /* make sure all parameter are there */
     
   for ( i = 0 ; i < argc; i += 2 ) {
@@ -452,6 +614,8 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
     GET_INT("-print", print_frms, i, "Sets frames printing");
     GET_INT("-op_class", link_sk_rx.channel_id.op_class, i, "Specify operational class");
     GET_INT("-ch_idx", link_sk_rx.channel_id.channel_num, i, "Sets the channel number (band) to be used");
+    GET_STRING("-sk", sk , i, "same/different , same - normal , different - thread function");
+    GET_STRING("-cli_name", cli_name , i, "cli name");
 
   } 
   i = 0;
@@ -460,6 +624,55 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 	myctx->cntrs.link_rx_packets = 0;
 	
   gettimeofday (&session_start, NULL);
+
+  cli_print( cli, "before the if 2\n");
+
+#ifdef __THREADX__
+  if (!strcmp(sk,"different"))
+  {
+	ULONG rv = TX_SUCCESS;
+	char thread_name[128];
+	ULONG param;
+	
+	rx_thread_num ++;
+	rx_thread_parameters[rx_thread_num].frames = frames;
+	rx_thread_parameters[rx_thread_num].myctx = myctx;
+	strcpy(rx_thread_parameters[rx_thread_num].buf,buf);
+	rx_thread_parameters[rx_thread_num].cycle_timeout = cycle_timeout;
+	rx_thread_parameters[rx_thread_num].rx_timeout = rx_timeout;
+	rx_thread_parameters[rx_thread_num].start = start;
+	rx_thread_parameters[rx_thread_num].current_cycle = current_cycle;
+	rx_thread_parameters[rx_thread_num].session_start = session_start;
+	rx_thread_parameters[rx_thread_num].cli = cli;
+	rx_thread_parameters[rx_thread_num].link_sk_rx = link_sk_rx;
+	rx_thread_parameters[rx_thread_num].timeout = timeout;
+	rx_thread_parameters[rx_thread_num].current = current;
+	rx_thread_parameters[rx_thread_num].print_frms = print_frms;
+	rx_thread_parameters[rx_thread_num].i = i;
+	strcpy(rx_thread_parameters[rx_thread_num].cli_name,cli_name);
+	
+	strcpy(thread_name,"rx_thread");
+	
+	param = (ULONG)&(rx_thread_parameters[rx_thread_num]);
+	
+	rv = tx_thread_create(&(rx_thread_parameters[rx_thread_num].rx_thread),thread_name,
+                        v2x_rx_thread_entry,param,
+                        rx_thread_parameters[rx_thread_num].rxtx_thread_stack,
+			sizeof(rx_thread_parameters[rx_thread_num].rxtx_thread_stack),
+			TX_THREAD_PRIORITY,
+			TX_THREAD_PRIORITY,
+			TX_NO_TIME_SLICE, TX_AUTO_START);
+	
+	if (rv != TX_SUCCESS){
+		cli_print(cli, "rx_thread_create: %s\n", atlk_rc_to_str(rv));
+		goto error;
+	}
+
+	
+  }
+  else
+  {
+#endif	
   while ( frames-- ) {
 
 		size_t size = sizeof(buf);
@@ -542,10 +755,117 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 			free(buf_str);
 		}
   }
-  
+#ifdef __THREADX__
+}
+#endif
 error:
   return atlk_error(rc);
 }
+
+#ifdef __THREADX__
+void v2x_rx_thread_entry(ULONG thread_input)
+{
+  atlk_rc_t      rc = ATLK_OK;
+  struct thread_parameter *thread_parameters = NULL;
+  thread_parameters = (struct thread_parameter *) thread_input;
+  int32_t frames = thread_parameters->frames;
+
+
+	while ( frames-- ) {
+
+		size_t size = sizeof(thread_parameters->buf);
+
+		memset( thread_parameters->buf, 0, sizeof(thread_parameters->buf) );
+		/* f_timeout is only for first frame timeout, */
+		if (thread_parameters-> myctx->cntrs.link_rx_packets ) {
+			thread_parameters->cycle_timeout = 5000;
+		}
+		
+		thread_parameters->rx_timeout = 0;
+		gettimeofday (&thread_parameters->start, NULL);	
+		
+		do {
+			gettimeofday (&thread_parameters->current_cycle, NULL);
+		    double elapsed_from_session_start = (thread_parameters->current_cycle.tv_sec - thread_parameters->session_start.tv_sec) * 1000.0;
+		    if (elapsed_from_session_start > thread_parameters->timeout) {
+				
+				goto error;
+		    }
+
+			rc = v2x_receive(thread_parameters->myctx->v2x_socket, thread_parameters->buf, &size, &thread_parameters->link_sk_rx, NULL);
+			
+			if ( (rc == ATLK_E_TIMEOUT) || (rc == ATLK_E_NOT_READY)) {
+				gettimeofday (&thread_parameters->current, NULL);	
+				double elapsedTime = (thread_parameters->current.tv_sec - thread_parameters->start.tv_sec) * 1000.0;
+				if ( (elapsedTime > thread_parameters->cycle_timeout) && (rc != ATLK_E_NOT_READY)) {
+					thread_parameters->rx_timeout = 1;
+				}
+				else {
+					usleep( 1000 );
+				}
+			}
+			else if ((rc == ATLK_OK)) {
+				thread_parameters->rx_timeout = 2;
+			}
+			else if (rc != ATLK_OK && rc != ATLK_E_NOT_READY) {
+				thread_parameters->rx_timeout = 10 + rc;
+			}
+      
+		} while ( !thread_parameters->rx_timeout );
+		
+		if ( thread_parameters->rx_timeout == 1 ) {
+			
+			goto error;
+		}
+    else if (thread_parameters->rx_timeout > 10) {
+      
+      goto error;
+    }
+
+  	thread_parameters->myctx->cntrs.link_rx_packets ++;
+		m_link_rx_packets ++;
+		
+		if ( thread_parameters->print_frms ) { 
+		
+			int j = 0;
+			const char *msg = thread_parameters->buf;
+			char* buf_str = (char*) malloc (2 * size + 1);
+			char* buf_ptr = buf_str;
+			
+			for (j = 0; j < (int) size; j++) {
+				buf_ptr += sprintf(buf_ptr, "%02X", msg[j]);
+			}
+			
+			*(buf_ptr + 1) = '\0';
+			
+				 
+			free(buf_str);
+		}		 	
+  }	
+	error:
+	return; 
+}
+
+int cli_v2x_link_rx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc)
+ {
+	 
+	 (void)command;
+	 (void)argv;
+	 (void)argc;
+	int i;
+
+	for (i=0;i<10;i++)
+	{	
+		cli_print(cli, "link rx thread terminated\n");
+		tx_thread_terminate(&(rx_thread_parameters[i].rx_thread));
+		tx_thread_delete(&(rx_thread_parameters[i].rx_thread));
+	}	
+	 	 
+	return ATLK_OK;
+ }
+
+
+#endif
 
 int cli_v2x_get_link_socket_addr( struct cli_def *cli, const char *command, char *argv[], int argc ) 
 { 

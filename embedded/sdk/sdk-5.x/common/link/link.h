@@ -37,4 +37,8 @@ atlk_rc_t diag_wlan_stat(wdm_service_t *wdm_service, int32_t wlan_if_index, wdm_
 
 int cli_v2x_cmd_sdk_version(struct cli_def *cli, const char *command, char *argv[], int argc);
 
+int cli_v2x_link_rx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc);
+int cli_v2x_link_tx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc);
+
+
 #endif /* __ATE_V2X_CLI_LINK_H__ */

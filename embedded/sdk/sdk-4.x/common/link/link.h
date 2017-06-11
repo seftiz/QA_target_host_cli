@@ -38,4 +38,9 @@ int cli_test_v2x_link_socket_create( struct cli_def *cli, const char *command, c
 //int cli_test_v2x_link_sample_subscriber_delete( struct cli_def *cli, const char *command, char *argv[], int argc );//chrub - not checked (Zohar's requirement)
 
 //int cli_test_v2x_link_sample_int32_receive( struct cli_def *cli, const char *command, char *argv[], int argc );//chrub - not checked (Zohar's requirement)
+
+int cli_v2x_link_rx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc);
+int cli_v2x_link_tx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc);
+
+
 #endif /* __ATE_V2X_CLI_LINK_H__ */
