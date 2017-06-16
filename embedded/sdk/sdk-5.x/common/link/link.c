@@ -88,6 +88,8 @@ static int rx_thread_num = 0;
 static int calloc_flag_tx = 0;
 static int calloc_flag_rx = 0;
 
+static char rx_buffer [2048];
+
 //till here
 
 static int if_index_state[2] = {0,0};
@@ -583,8 +585,9 @@ else
 	
 
   for (i = 0; i < num_frames; ++i) {
-	  	hex_arr[1] = i;
-	  	hex_arr[0] = (i & 0xff00)>>8;
+		hex_arr[2] = i;
+	  	hex_arr[1] = (i & 0xff00)>>8;;
+	  	hex_arr[0] = (i & 0xff0000)>>16;
 		rc = v2x_send(myctx->v2x_socket, hex_arr, msg_size, &link_sk_tx_param, NULL);
 						
 		if ( atlk_error(rc) ) {
@@ -619,8 +622,9 @@ static void *v2x_tx_thread_entry(void *arg)
 	
 
 	for (i = 0; i < thread_parameters->num_frames; ++i) {
-	  	thread_parameters->hex_arr[1] = i;
-	  	thread_parameters->hex_arr[0] = (i & 0xff00)>>8;
+		thread_parameters->hex_arr[2] = i;
+	  	thread_parameters->hex_arr[1] = (i & 0xff00)>>8;
+	  	thread_parameters->hex_arr[0] = (i & 0xff0000)>>16;
 		rc = v2x_send(thread_parameters->myctx->v2x_socket, thread_parameters->hex_arr, thread_parameters->msg_size, &thread_parameters->link_sk_tx_param, NULL);
 		
 						
@@ -677,14 +681,14 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 
   /* Received LINK descriptor */
 	v2x_receive_params_t 	link_sk_rx;// = V2X_RECEIVE_PARAMS_INIT;
-  int32_t         			frames   		= 1,
-												i        		= 0,
-												cycle_timeout  		= 5000,
-												timeout  		= 50000,
-												print_frms	=	1, 
-												rx_timeout	=	0;
-char          str_data[200] = "";
-	char 									buf[MAX_WAVE_FRAME_SIZE] = {0};
+ 	 int32_t  frames   		= 1,
+		  i        		= 0,
+		  cycle_timeout  	= 5000,
+		  timeout  		= 50000,
+		  print_frms	        = 1, 
+		  rx_timeout    	= 0;
+	char          str_data[200] = "";
+	char buf [MAX_WAVE_FRAME_SIZE] = {0};
 									
 	struct timeval start, current, session_start, current_cycle;
   (void) command;
@@ -770,9 +774,9 @@ char          str_data[200] = "";
   {	 
   while ( frames-- ) {
 
-		size_t size = sizeof(buf);
+		size_t size = sizeof(rx_buffer);
 
-		memset( buf, 0, sizeof(buf) );
+		memset( rx_buffer, 0, sizeof(rx_buffer) );
 		/* f_timeout is only for first frame timeout, */
 		if ( myctx->cntrs.link_rx_packets ) {
 			cycle_timeout = 5000;
@@ -790,7 +794,8 @@ char          str_data[200] = "";
 		    }
 			
 
-			rc = v2x_receive(myctx->v2x_socket, buf, &size, &link_sk_rx, NULL);
+			rc = v2x_receive(myctx->v2x_socket, rx_buffer, &size, &link_sk_rx, NULL);
+			
 			if ( (rc == ATLK_E_TIMEOUT) || (rc == ATLK_E_NOT_READY)||(rc == ATLK_E_EMPTY)) {
 				gettimeofday (&current, NULL);	
 				double elapsedTime = (current.tv_sec - start.tv_sec) * 1000.0;
@@ -821,28 +826,23 @@ char          str_data[200] = "";
 
   	myctx->cntrs.link_rx_packets ++;
 		m_link_rx_packets ++;
+
+
+	if ( print_frms ) { 
 		
-		if ( print_frms ) { 
 			int j = 0;
-			const char *msg = buf;
+			const char *msg = rx_buffer; //buf;
+			//char* buf_str = (char*) malloc (2 * size + 1);
 			char* buf_str = (char*) malloc (sizeof(char) * sizeof(buf) + 1);
 			char* buf_ptr = buf_str;
 			
 			for (j = 0; j < (int) size; j++) {
-				buf_ptr += sprintf(buf_ptr, "%02X", msg[j]);
+				buf_ptr += sprintf(buf_ptr, "%02X", (uint8_t) msg[j]);
 			}
 			
 			*(buf_ptr + 1) = '\0';
-			//added for chs tests
-				if (link_sk_rx.channel_id.channel_num != 0){
-				cli_print( cli,   "Frame: %d, ch_num: %d, power_dbm8 %d ,time_slot: %d  timestamp: %" PRIu64 "\n",
-				 (int) ++i,link_sk_rx.channel_id.channel_num ,link_sk_rx.power_dbm8,link_sk_rx.channel_id.time_slot,link_sk_rx.receive_time_us);
 			
-				}
-			//till here
-		else
-		{
-		cli_print( cli,   "Frame: %d, SA : %02x:%02x:%02x:%02x:%02x:%02x, DA : %02x:%02x:%02x:%02x:%02x:%02x\r\n" /*Power : %.2f\r\n"*/,
+			cli_print( cli,   " Frame: %d, SA : %02x:%02x:%02x:%02x:%02x:%02x, DA : %02x:%02x:%02x:%02x:%02x:%02x\r\n RxData %s\r\n" /*Power : %.2f\r\n"*/,
 				 (int) ++i,
 				 /* SA */
 				 link_sk_rx.source_address.octets[0], link_sk_rx.source_address.octets[1],
@@ -851,13 +851,12 @@ char          str_data[200] = "";
 				 /* DA */
 				 link_sk_rx.dest_address.octets[0], link_sk_rx.dest_address.octets[1],
 				 link_sk_rx.dest_address.octets[2], link_sk_rx.dest_address.octets[3],
-				 link_sk_rx.dest_address.octets[4], link_sk_rx.dest_address.octets[5]
-				 /*,
+				 link_sk_rx.dest_address.octets[4], link_sk_rx.dest_address.octets[5],
+				 buf_str/*,
 				 link_sk_rx.power_dbm8 == V2X_POWER_DBM8_NA ? NAN : (double)link_sk_rx.power_dbm8 / 8.0 */);
-			}
 				 
 			free(buf_str);
-		}
+		}		
   }
   
 error:

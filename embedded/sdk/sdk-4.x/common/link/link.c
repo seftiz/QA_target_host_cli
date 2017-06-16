@@ -496,8 +496,9 @@ else
   {
 #endif
   for (i = 0; i < num_frames; ++i) {
-	  	hex_arr[1] = i;
-	  	hex_arr[0] = (i & 0xff00)>>8;
+		hex_arr[2] = i;
+	  	hex_arr[1] = (i & 0xff00)>>8;
+	  	hex_arr[0] = (i & 0xff0000)>>16;
 		rc = v2x_send(myctx->v2x_socket, hex_arr, msg_size, &link_sk_tx_param, NULL);
 		if ( atlk_error(rc) ) {
 			cli_print(cli, "ERROR : v2x_send: %s\n", atlk_rc_to_str(rc));
@@ -532,8 +533,9 @@ void v2x_tx_thread_entry(ULONG thread_input)
 	
 
 	for (i = 0; i < thread_parameters->num_frames; ++i) {
-	  	thread_parameters->hex_arr[1] = i;
-	  	thread_parameters->hex_arr[0] = (i & 0xff00)>>8;
+		thread_parameters->hex_arr[2] = i;
+	  	thread_parameters->hex_arr[1] = (i & 0xff00)>>8;
+	  	thread_parameters->hex_arr[0] = (i & 0xff0000)>>16;
 		rc = v2x_send(thread_parameters->myctx->v2x_socket, thread_parameters->hex_arr, thread_parameters->msg_size, &thread_parameters->link_sk_tx_param, NULL);
 		
 		
