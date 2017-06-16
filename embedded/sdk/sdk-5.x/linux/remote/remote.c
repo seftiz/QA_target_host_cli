@@ -288,12 +288,14 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
   	
   GET_STRING("-hw_addr", hw_addr, 0, "Get MAC address  xx:yy:ee:ff:gg:cc (MAC address)");
   GET_INT("-device_type", device_type, 2, "Set device type [DSM_DEVICE_TYPE_CRATON2 = 0, DSM_DEVICE_TYPE_SECTON = 1]");
+  
   GET_STRING("-if", if_name, 4, "Get net interface name (for example eth1)");
   cli_print(cli,"if - %s",if_name);
   cli_print(cli,"%d",__LINE__);
   dsm_device.device_type = device_type;
   cli_print(cli, "device type %d", device_type);
   cli_print(cli, "device type %d", dsm_device.device_type);
+  
   
 
   ////////////////////////////////////////////////////////
@@ -380,7 +382,18 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
 	    (void)fprintf(stderr, "socket_create failed: %d", rv);
 	    return EXIT_FAILURE;
 	  }
-	  dsm_device.device_name = SECTON_DEVICE_NAME;
+
+
+	 // dsm_device.device_name = SECTON_DEVICE_NAME;
+
+	  if (device_type == DSM_DEVICE_TYPE_SECTON) {
+            dsm_device.device_name = SECTON_DEVICE_NAME;
+           }
+	  else {
+	    dsm_device.device_name = CRATON2_DEVICE_NAME;
+           }
+          
+
 	  dsm_device.device_type = device_type;//DSM_DEVICE_TYPE_CRATON2;
 	  dsm_device.rdev_ptr = ll_get();
 
