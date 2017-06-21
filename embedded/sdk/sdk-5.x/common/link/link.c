@@ -612,7 +612,7 @@ error:
   return rc;
 }
 
-static void *v2x_tx_thread_entry(void *arg)
+static void *v2x_tx_thread_entry(void *arg) //chrub
 {
 
 	int i;
@@ -646,7 +646,7 @@ static void *v2x_tx_thread_entry(void *arg)
   	return NULL;
 }
 
-int cli_v2x_link_tx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc)
+int cli_v2x_link_tx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc) //chrub
  {
 	 
 	 (void)command;
@@ -680,7 +680,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
   atlk_rc_t      rc = ATLK_OK;
 
   /* Received LINK descriptor */
-	v2x_receive_params_t 	link_sk_rx;// = V2X_RECEIVE_PARAMS_INIT;
+	v2x_receive_params_t 	link_sk_rx;
  	 int32_t  frames   		= 1,
 		  i        		= 0,
 		  cycle_timeout  	= 5000,
@@ -695,6 +695,8 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 
 	char sk[256] = "same";
 	 char cli_name[256] = "none";
+
+	int print_frame = 0;
 
 
   /* get user context */
@@ -829,10 +831,12 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 
 
 	if ( print_frms ) { 
+		if (print_frame == 100)
+		{
+			print_frame = 0;
 		
 			int j = 0;
-			const char *msg = rx_buffer; //buf;
-			//char* buf_str = (char*) malloc (2 * size + 1);
+			const char *msg = rx_buffer;			
 			char* buf_str = (char*) malloc (sizeof(char) * sizeof(buf) + 1);
 			char* buf_ptr = buf_str;
 			
@@ -856,9 +860,13 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 				 link_sk_rx.power_dbm8 == V2X_POWER_DBM8_NA ? NAN : (double)link_sk_rx.power_dbm8 / 8.0 */);
 				 
 			free(buf_str);
-		}		
-  }
-  
+		}
+		else
+		{ 
+			print_frame ++;
+		}
+	}		
+  }  
 error:
   return atlk_error(rc);
 }
@@ -867,7 +875,7 @@ error:
 
 
 static void *
-v2x_rx_thread_entry(void *arg)
+v2x_rx_thread_entry(void *arg) // chrub
 {
   atlk_rc_t      rc = ATLK_OK;
   struct thread_parameter *thread_parameters = NULL;
@@ -973,7 +981,7 @@ v2x_rx_thread_entry(void *arg)
   return NULL;
 }
 
-int cli_v2x_link_rx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc)
+int cli_v2x_link_rx_thread_stop(struct cli_def *cli, const char *command, char *argv[], int argc) //chrub
  {
 	 
 	 (void)command;

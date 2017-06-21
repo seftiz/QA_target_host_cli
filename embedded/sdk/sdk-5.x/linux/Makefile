@@ -1,8 +1,9 @@
 # Autotalks SDK directory
 #ATLK_SDK_DIR := /media/sf_fw_release/dbg-secton-sdk-5.2.0-beta3/
 #ATLK_SDK_DIR := /docs/ATE/fw_releases/craton2-sdk-5.3.0-alpha1
+ATLK_SDK_DIR := /media/sf_ATE_proj/new_dbg-secton-sdk-5.3.0-beta3
 
-ATLK_SDK_DIR := /media/sf_C_DRIVE/temp/dbg-craton2-sdk-5.3.0-beta3
+#ATLK_SDK_DIR := /media/sf_C_DRIVE/temp/dbg-craton2-sdk-5.3.0-beta3
 COMMON := ../common
 APPS := ../apps
 
@@ -14,16 +15,7 @@ ATLK_SDK_LIB_DIR := $(ATLK_SDK_DIR)/lib
 ATLK_SDK_INCLUDE_DIR := $(ATLK_SDK_DIR)/include
 
 # Autotalks library name
-ATLK_SDK_LIB := atlklocal_linux_u
-
-# Open below define to compile for CR2
-TOOLCHAIN_PATH := /tools/gcc/arm/poky-st/2.0.1/sysroots
-
-
-INCLUDEPATH := $(TOOLCHAIN_PATH)/cortexa7hf-vfp-neon-poky-linux-gnueabi/usr/include
-LIBPATH := $(TOOLCHAIN_PATH)/cortexa7hf-vfp-neon-poky-linux-gnueabi/usr/lib
-CONFIG_TOOLSET:=$(TOOLCHAIN_PATH)/x86_64-pokysdk-linux/usr/bin/arm-poky-linux-gnueabi/arm-poky-linux-gnueabi-
-CONFIG_OPT_CFLAGS:=-mfloat-abi=hard -mthumb -mfpu=neon --sysroot=$(TOOLCHAIN_PATH)/cortexa7hf-vfp-neon-poky-linux-gnueabi -B$(TOOLCHAIN_PATH)/x86_64-pokysdk-linux/usr/libexec/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/5.2.0 -lpthread -I$(INCLUDEPATH) -L$(LIBPATH)
+ATLK_SDK_LIB := atlkremote_linux_u
 
 # Common C compilation flags
 ATLK_CFLAGS := -std=gnu99 -Wall -Wextra -Werror
@@ -36,7 +28,7 @@ TARGET_APP := v2x_cli
 
 # Target source files
 TARGET_SRCS := libcli/libcli.c
-TARGET_SRCS += link_layer/local/*.c 
+TARGET_SRCS += link_layer/*.c  
 TARGET_SRCS += $(APPS)/sniffer/sniffer.c
 TARGET_SRCS += $(COMMON)/v2x_cli/v2x_cli.c
 TARGET_SRCS += $(COMMON)/general/general.c
@@ -46,10 +38,10 @@ TARGET_SRCS += remote/remote.c
 # Additional common libraries
 ADDITIONAL_LIBS:= -lpthread -lcrypt -lrt
                
-$(TARGET_APP): $(TARGET_SRCS)
-	$(CONFIG_TOOLSET)gcc $(ATLK_CFLAGS) $(TARGET_SRCS) -o $(TARGET_APP) \
+$(TARGET_APP):$(TARGET_SRCS)
+	$(CC) $(ATLK_CFLAGS) $(TARGET_SRCS) -o $(TARGET_APP) \
 	-I$(ATLK_SDK_INCLUDE_DIR) -L$(ATLK_SDK_LIB_DIR) \
-	-l$(ATLK_SDK_LIB) $(ADDITIONAL_LIBS)
+	-l$(ATLK_SDK_LIB) $(ADDITIONAL_LIBS) \
 
 all: $(TARGET_APP)
 
