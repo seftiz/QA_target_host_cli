@@ -200,6 +200,9 @@ int create_cli_struct( struct cli_def **cli )
   cli_register_command(*cli, d, "rx", cli_v2x_link_rx_thread_stop, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "rx thread stop");
   cli_register_command(*cli, d, "tx", cli_v2x_link_tx_thread_stop, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "tx thread stop");
 
+  d = cli_register_command(*cli, c, "freq", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "frequency"); // chrub
+  cli_register_command(*cli, d, "set", v2x_set_freq, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "set frequency");
+
   //d = cli_register_command(*cli, c, "netif_profile", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set netif profile"); // chrub
   //d = cli_register_command(*cli, c, "netif_profile", NULL, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "Set netif profile"); // chrub
   //cli_register_command(*cli, d, "set", cli_v2x_netif_profile_set, PRIVILEGE_UNPRIVILEGED, MODE_EXEC, "set");

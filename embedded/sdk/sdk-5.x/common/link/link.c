@@ -697,6 +697,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 	 char cli_name[256] = "none";
 
 	int print_frame = 0;
+	int print_rate = 1;
 
 
   /* get user context */
@@ -719,6 +720,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 	GET_INT("-time_slot", link_sk_rx.channel_id.time_slot, i, "which alternating access is requested");
     GET_STRING("-sk", sk , i, "same/different , same - normal , different - thread function");
     GET_STRING("-cli_name", cli_name , i, "cli name");
+    GET_INT("-print_rate", print_rate, i, "print sample");
   } 
   i = 0;
   cli_print( cli, "Note : System will wait for %d frames or timeout %d", (int) frames, (int) timeout );
@@ -831,10 +833,8 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 
 
 	if ( print_frms ) { 
-		if (print_frame == 100)
+		if (!(print_frame % print_rate))
 		{
-			print_frame = 0;
-		
 			int j = 0;
 			const char *msg = rx_buffer;			
 			char* buf_str = (char*) malloc (sizeof(char) * sizeof(buf) + 1);
@@ -860,11 +860,9 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 				 link_sk_rx.power_dbm8 == V2X_POWER_DBM8_NA ? NAN : (double)link_sk_rx.power_dbm8 / 8.0 */);
 				 
 			free(buf_str);
-		}
-		else
-		{ 
-			print_frame ++;
-		}
+			
+		}		 
+		print_frame ++;		
 	}		
   }  
 error:
@@ -1003,6 +1001,45 @@ int cli_v2x_link_rx_thread_stop(struct cli_def *cli, const char *command, char *
 	}
 	return ATLK_OK;
  }
+
+int v2x_set_freq(struct cli_def *cli, const char *command, char *argv[], int argc)
+{
+	
+  	(void) command;
+  	(void) argv;
+  	(void) argc;
+
+	uint8_t rf_if;
+	uint32_t freq;
+	int32_t i = 0;
+	atlk_rc_t rc = ATLK_OK;
+
+	wdm_service_t *wdm_service_ptr = NULL;
+	rc = wdm_service_get(NULL, &wdm_service_ptr);	
+	if(rc != 0){
+		cli_print(cli, "ERROR : WDM service not registered\n");
+		return CLI_ERROR;
+	}
+
+	IS_HELP_ARG("link freq set [-rf_if 0|1] [-freq ]");
+  	CHECK_NUM_ARGS /* make sure all parameter are there */
+    
+  	for ( i = 0 ; i < argc; i += 2 ) {
+    		GET_INT("-rf_if",rf_if , i, "rf interface");
+    		GET_INT("-freq", freq, i, "frequency");
+  	} 
+
+	if ((rf_if == 0) || (rf_if == 1)) {
+		rc = wdm_frequency_set(wdm_service_ptr, rf_if, freq);
+		cli_print(cli, "wdm_frequency_set : rc = %d, %s\n", rc, atlk_rc_to_str(rc) );		
+	}
+	else {		
+		cli_print(cli, "ERROR : rf_if out of range");
+		return CLI_ERROR;
+	}
+
+	return rc;	
+}
 
 
 int cli_v2x_get_link_socket_addr( struct cli_def *cli, const char *command, char *argv[], int argc ) 
