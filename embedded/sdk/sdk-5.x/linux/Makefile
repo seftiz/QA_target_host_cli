@@ -2,7 +2,7 @@
 #ATLK_SDK_DIR := /media/sf_fw_release/dbg-secton-sdk-5.2.0-beta3/
 #ATLK_SDK_DIR := /docs/ATE/fw_releases/craton2-sdk-5.3.0-alpha1
 #ATLK_SDK_DIR := /media/sf_ATE_proj/new_dbg-secton-sdk-5.3.0-beta3
-ATLK_SDK_DIR := /media/sf_ATE_proj/dbg-secton-sdk-5.4.0-alpha1
+ATLK_SDK_DIR := /docs/ATE/fw_releases/dbg-secton-sdk-5.4.0-beta1
 
 #ATLK_SDK_DIR := /media/sf_C_DRIVE/temp/dbg-craton2-sdk-5.3.0-beta3
 COMMON := ../common
@@ -29,12 +29,19 @@ TARGET_APP := v2x_cli
 
 # Target source files
 TARGET_SRCS := libcli/libcli.c
-TARGET_SRCS += link_layer/*.c  
+TARGET_SRCS += common_src/link_layer/linux_u/remote/*.c
+TARGET_SRCS += common_src/target_type/target_type_remote.c
+TARGET_SRCS += common_src/ref_sys/ref_sys.c
 TARGET_SRCS += $(APPS)/sniffer/sniffer.c
 TARGET_SRCS += $(COMMON)/v2x_cli/v2x_cli.c
 TARGET_SRCS += $(COMMON)/general/general.c
 TARGET_SRCS += $(COMMON)/link/link.c
 TARGET_SRCS += remote/remote.c
+
+
+
+# For reference system initializtion (ref_sys.h)
+ATLK_CFLAGS += -Icommon_src/include  
 
 # Additional common libraries
 ADDITIONAL_LIBS:= -lpthread -lcrypt -lrt

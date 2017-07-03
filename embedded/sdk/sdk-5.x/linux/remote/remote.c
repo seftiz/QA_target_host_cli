@@ -31,11 +31,14 @@
 #include <atlk/v2x_service.h>
 #include "remote.h"
 #include <netinet/ether.h>
-#include "../link_layer/link_layer.h"
+#include <ref_sys.h>
+
 
 #define NETWORK_INTERFACE_NAME "eth1"
 #define SECTON_DEVICE_NAME "Secton"
 #define CRATON2_DEVICE_NAME "Craton2"
+#if 0
+
 static dsm_device_config_t dsm_device;
 static dsm_service_config_t dsm_service;
 
@@ -49,127 +52,7 @@ static dsm_service_config_t dsm_service;
 #define DATA_PATH "./dsp_sw_data.bin"
 #define CACHE_PATH "./dsp_sw_code_cache.bin"
 #define SW_PATH "./dsp_sw.bin"
-//
-///* Device descriptor */
-//struct ll_dev {
-//  /* Socket file descriptor */
-//  int socket_fd;
-//  /* Interface name */
-//  char *dev_name;
-//};
-//
-///* Length of Ethernet device interface string */
-//#define ETH_DEV_NAME_LEN IF_NAMESIZE
-///* Ethernet interface name */
-//static char eth_dev_name[ETH_DEV_NAME_LEN];
-//
-///* Linux platform Link Layer send handler */
-//static atlk_rc_t
-//v2x_ll_send(void *device, const void *pdu, size_t pdu_size)
-//{
-//  /* LL device */
-//  struct ll_dev *dev = (struct ll_dev *)device;
-//  /* Actually send length */
-//  ssize_t len;
-//
-//  if(!device || !pdu) {
-//    fprintf(stderr, "Mandatory argument is missing\n");
-//    return ATLK_E_INVALID_ARG;
-//  }
-//
-//  len = send(dev->socket_fd, pdu, pdu_size, 0);
-//  if(len < 0) {
-//    fprintf(stderr, "Failed to send, pdu_size %zu  errno %d\n", pdu_size,
-//    errno);
-//    return ATLK_E_UNSPECIFIED;
-//  }
-//
-//  if((size_t)len != pdu_size) {
-//    fprintf(stderr, "Partial send len = %zd\n", len);
-//    return ATLK_E_UNSPECIFIED;
-//  }
-//
-//  return ATLK_OK;
-//}
-//
-///* Linux platform Link Layer receive handler */
-//static atlk_rc_t
-//v2x_ll_receive(void *device, void *pdu, size_t *pdu_size_ptr)
-//{
-//  /* LL device */
-//  struct ll_dev *dev = (struct ll_dev *)device;
-//  /* Actually send length */
-//  ssize_t len;
-//
-//  if(!device || !pdu || !pdu_size_ptr) {
-//    fprintf(stderr, "Mandatory argument is missing\n");
-//    return ATLK_E_INVALID_ARG;
-//  }
-//
-//  len = recv(dev->socket_fd, pdu, *pdu_size_ptr, 0);
-//  if(len < 0) {
-//    fprintf(stderr, "Failed to send\n");
-//    return ATLK_E_UNSPECIFIED;
-//  }
-//
-//  *pdu_size_ptr = len;
-//
-//  return ATLK_OK;
-//}
-//
-///* Linux platform Link Layer local-address-get handler */
-//static atlk_rc_t
-//v2x_ll_address_get(void *device, eui48_t *address)
-//{
-//  /* LL device */
-//  struct ll_dev *dev = (struct ll_dev *)device;
-//  /* Interface request*/
-//  struct ifreq ifr;
-//
-//  strcpy(ifr.ifr_ifrn.ifrn_name, eth_dev_name);
-//  ioctl(dev->socket_fd, SIOCGIFHWADDR, &ifr);
-//  memcpy(address->octets, ifr.ifr_hwaddr.sa_data, 6);
-//  return ATLK_OK;
-//}
-//
-//static atlk_rc_t
-//v2x_ll_acquire(void *device)
-//{
-//  if(!device)
-//    return ATLK_E_INVALID_ARG;
-//  return 0;
-//}
-//
-//static atlk_rc_t
-//v2x_ll_release(void *device)
-//{
-//  if(!device)
-//    return ATLK_E_INVALID_ARG;
-//  return 0;
-//}
-//
-/*static rdev_link_ops_t linkOps = {
-  .acquire = v2x_ll_acquire, .release = v2x_ll_release,
-  .send = v2x_ll_send,
-  .receive = v2x_ll_receive,
-  .host_address_get = v2x_ll_address_get
-};*/
 
-
-/*static rdev_desc_t
-sectonRemoteDevice = {
-  .rdev_address.octets = { 0x00, 0x02, 0xcc, 0xf0, 0x00, 0x07},
-  .rdev_interface_name = NULL,
-  .link_ops_ptr = &linkOps,
-  .link_context_ptr = &context,
-  .hw_ops_ptr = NULL,
-  .hw_context_ptr = NULL,
-};*/
-
-  /**
-     This part should be done by the driver context.
-     In the future, we should assume that this is already done and
-  **/
 static atlk_rc_t
 read_file_contents(const char *path, char **buf_ptr, size_t *size)
 {
@@ -247,6 +130,8 @@ ddm_config_init(ddm_configure_t *config)
   return ATLK_OK;
 }
 
+#endif
+
 
 
 //SECTON new remote registration method...
@@ -256,255 +141,45 @@ cli_device_register(struct cli_def *cli, const char *command, char *argv[], int 
 {
 
   /* get user context */
-  // user_context *myctx = (user_context *) cli_get_context(cli);
   atlk_rc_t rc = ATLK_OK;
   char  hw_addr[256] = {'\0'};
-  ddm_service_t *ddm_service_ptr = NULL;
-  /* Remote L2 address */
- // static struct sockaddr_ll remote_addr_ll;
-
- // struct sockaddr_ll local_addr;
- // int socket_fd;
-  int rv;
-  int retries;
-//  int ifindex;
-//  int fd;
-//  struct ifreq ifr;
   int32_t device_type = 0;
- // unsigned char *host_hw_addr = NULL;
-  //char host_hw_addr_string[80] = {'\0'};
   (void) command;
-  ddm_status_t ddm_status;
-  ddm_configure_t ddm_config = DDM_CONFIGURE_INIT;
-  atlk_wait_t wait;
   char if_name[16] = {'\0'};
-//  struct ether_addr *arg_addr;
- // eui48_t mac_addr;
-
-
+  int argc_param;
+  
   IS_HELP_ARG("register to remote device -hw_addr -device_type -if");
-
+  strcpy((char *) if_name, "eth1");
   CHECK_NUM_ARGS /* make sure all parameter are there */
-  	
+   cli_print ( cli,"cli_device_register");	
   GET_STRING("-hw_addr", hw_addr, 0, "Get MAC address  xx:yy:ee:ff:gg:cc (MAC address)");
   GET_INT("-device_type", device_type, 2, "Set device type [DSM_DEVICE_TYPE_CRATON2 = 0, DSM_DEVICE_TYPE_SECTON = 1]");
   
   GET_STRING("-if", if_name, 4, "Get net interface name (for example eth1)");
+  
+  char *argv_param[2];
   cli_print(cli,"if - %s",if_name);
   cli_print(cli,"%d",__LINE__);
-  dsm_device.device_type = device_type;
+  //dsm_device.device_type = device_type;
   cli_print(cli, "device type %d", device_type);
-  cli_print(cli, "device type %d", dsm_device.device_type);
   
+  argc_param = 2;
   
-
-  ////////////////////////////////////////////////////////
-  //////  remote host sectgon registration  /////////////
-  //////////////////////////////////////////////////////
- /* if (DSM_DEVICE_TYPE_SECTON == device_type) {
-	  memset(&ifr, 0, sizeof(ifr));
-
-	   fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-	   cli_print(cli, "[%d] socket fd %d", __LINE__, fd);
-	   ifr.ifr_addr.sa_family = AF_INET;
-	   strncpy(ifr.ifr_name , NETWORK_INTERFACE_NAME , ETH_DEV_NAME_LEN);
-
-	   if (0 == ioctl(fd, SIOCGIFHWADDR, &ifr)) {
-	 	  host_hw_addr = (unsigned char *)ifr.ifr_hwaddr.sa_data;
-	   }
-	   cli_print(cli, "[%d] host hw addr %.2X:%.2X:%.2X:%.2X:%.2X:%.2X", __LINE__, host_hw_addr[0], host_hw_addr[1], host_hw_addr[2], host_hw_addr[3], host_hw_addr[4], host_hw_addr[5]);
-
-	   (if_name[0] != '\0') ? (ifindex = if_nametoindex(if_name)) : (ifindex = if_nametoindex("eth0"));
-	   if (ifindex == 0) {
-	     perror("if_nametoindex");
-	     return ATLK_E_NOT_FOUND;
-	   }
-
-	   rv = close(fd);
-
-	   arg_addr = ether_aton(hw_addr);
-	   if (arg_addr == NULL) {
-	     fprintf(stderr, "Invalid MAC address: %s", hw_addr);
-	     return ATLK_E_INVALID_ARG;
-	   }
-
-	   memcpy(mac_addr.octets, arg_addr, EUI48_LEN);
-	   remote_addr_ll.sll_family = PF_PACKET;
-	   remote_addr_ll.sll_protocol = htons(ETH_P_ALL);
-	   remote_addr_ll.sll_ifindex = ifindex;
-	   remote_addr_ll.sll_halen = EUI48_LEN;
-	   memcpy(&remote_addr_ll.sll_addr[0], mac_addr.octets, EUI48_LEN);
-
-
-  
-
-	   local_addr.sll_family = PF_PACKET;
-	   local_addr.sll_protocol = htons(ETH_P_ALL);
-	   local_addr.sll_ifindex = ifindex;
-	   local_addr.sll_halen = 6;
-
-	   memcpy(&local_addr.sll_addr[0], &host_hw_addr[0], 6);
-*/
-//	   socket_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL/*ETH_P_IP*/));
-
-//	   cli_print(cli, "[%d] socket socket_fd %d", __LINE__, socket_fd);
-//	   if (socket_fd == -1) {
-//	     perror("socket");
-//	     return 1;
-//	   }
-
-	   /* Bind socket */
-//	   rv = bind(socket_fd,
-//	             (struct sockaddr *)&local_addr,
-//	             sizeof(local_addr));
-//
-//	   if (rv == -1) {
-//	     perror("bind");
-//	     return 1;
-//	   }
-//
-//	   context = socket_fd;
-//
-//	   dsm_device.device_name = SECTON_DEVICE_NAME;
-//	   dsm_device.device_type = DSM_DEVICE_TYPE_CRATON2;
-//	   memcpy(&sectonRemoteDevice.rdev_address, &mac_addr, EUI48_LEN);
-//
-//	   dsm_device.rdev_ptr = &sectonRemoteDevice;
-//
-//	   rc = dsm_device_register(&dsm_device, 1);
-// } else {
-	  ////////////////////////////////////////////////////////
-	  //////  local host CRATON2 registration   /////////////
-	  //////////////////////////////////////////////////////
-	  rv = ll_init(if_name);
-	  if (rv) {
-	    (void)fprintf(stderr, "socket_create failed: %d", rv);
-	    return EXIT_FAILURE;
-	  }
-
-
-	 // dsm_device.device_name = SECTON_DEVICE_NAME;
-
-	  if (device_type == DSM_DEVICE_TYPE_SECTON) {
-            dsm_device.device_name = SECTON_DEVICE_NAME;
-           }
-	  else {
-	    dsm_device.device_name = CRATON2_DEVICE_NAME;
-           }
-          
-
-	  dsm_device.device_type = device_type;//DSM_DEVICE_TYPE_CRATON2;
-	  dsm_device.rdev_ptr = ll_get();
-
-	  rc = dsm_device_register(&dsm_device, 1);
-
-  //}
-
+  argv_param[0] = (char *)malloc(20);
+  argv_param[1] = (char *)malloc(20);
+  memset((void *)argv_param[0],0,20);
+  memset((void *)argv_param[1],0,20);
+  strcpy((char *) argv_param[1],(const char *)if_name);
+  strcpy((char *) argv_param[0],(const char *)if_name);
+  cli_print ( cli,"cli_device_register strcp");
+  /** Reference system initialization */
+  cli_print ( cli,"cli_device_register ref_sys_init, argv[1] - %s", (char *)argv_param[1]);
+  rc = ref_sys_init(argc_param, argv_param);
   if (atlk_error(rc)) {
-	  cli_print ( cli, "ERROR : Failed to register the device : %s", atlk_rc_to_str(rc));	  
-	  return atlk_error(rc);  
-  }
-
-  rc = dsm_device_init(dsm_device.device_name, ATLK_FOREVER);
-  if (atlk_error(rc)) {
-	  cli_print ( cli, "ERROR : Failed to init the device : %s", atlk_rc_to_str(rc));	  
-	  return atlk_error(rc);  
-  }
-
-  dsm_service.service_name = "DDM";
-  dsm_service.service_type = DSM_SERVICE_TYPE_DDM;
-  /* The name bundles the service to the specific device */
-  dsm_service.device_name = SECTON_DEVICE_NAME;
-  rc = dsm_service_register(&dsm_service, (size_t)1);
-  if (atlk_error(rc)) {
-  	  cli_print ( cli, "ERROR : Failed to register ddm service : %s", atlk_rc_to_str(rc));
-  	  return atlk_error(rc);
-    }
-  cli_print(cli, "[%d] ddm service registration rc = %d", __LINE__, (int)rc);
-  rc = dsm_service_init(dsm_service.service_name, ATLK_FOREVER);
-  if (atlk_error(rc)) {
-	  cli_print ( cli, "ERROR : Failed to init ddm service : %s", atlk_rc_to_str(rc));
-	  return atlk_error(rc);
-  }
-
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  /////////////////////////////////// handle ddm - start //////////////////////////////////////////////////////
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  rc = ddm_service_get(NULL, &ddm_service_ptr);
-  if (atlk_error(rc)) {
-	  cli_print ( cli, "ERROR :ddm_service_get failed: %s",  atlk_rc_to_str(rc));
+    (void)fprintf(stderr, "ref-sys init failed: %d\n", rc);
     return EXIT_FAILURE;
   }
-
-  rc = ddm_status_change_notify_register(ddm_service_ptr,
-                                         status_change_handler);
-  if (atlk_error(rc)) {
-	  cli_print ( cli, "ERROR :ddm_status_change_notify_register failed: %s",
-                  atlk_rc_to_str(rc));
-    return EXIT_FAILURE;
-  }
-
-  rc = ddm_status_get(ddm_service_ptr, &ddm_status, &atlk_wait_forever);
-  if (atlk_error(rc)) {
-	  cli_print ( cli, "ERROR :ddm_status_get failed: %s", atlk_rc_to_str(rc));
-    return EXIT_FAILURE;
-  }
-
-  cli_print ( cli, "ddm_status: %d", ddm_status);
-
-  rc = ddm_config_init(&ddm_config);
-  if (atlk_error(rc)) {
-	  cli_print ( cli, "ERROR :** Device config files missing, "\
-            "not initializing device ** %s", atlk_rc_to_str(rc));
-  }
-  else {
-    retries = 3;
-    wait.wait_type = ATLK_WAIT_INTERVAL;
-    wait.wait_usec = 1000000;
-    do {
-      rc = ddm_configuration_set(ddm_service_ptr,
-                                &ddm_config,
-                                &wait);
-      if (atlk_error(rc)) {
-        switch (rc) {
-          case ATLK_E_EXISTS:
-        	  cli_print ( cli, "ERROR :Configuration already loaded");
-        	  return ATLK_OK;
-
-          case ATLK_E_INVALID_STATE:
-            cli_print ( cli, "ERROR :ddm_configuration_set invalid state, retrying...");
-            break;
-
-          case ATLK_E_TIMEOUT:
-        	  cli_print ( cli, "ERROR :ddm_configuration_set timedout, retrying...");
-            break;
-
-          default:
-        	  cli_print ( cli, "ERROR :ddm_configuration_set failed, %s",
-                          atlk_rc_to_str(rc));
-            return EXIT_FAILURE;
-        }
-        retries--;
-        if (retries <= 0) {
-        	cli_print ( cli, "ERROR :ddm_configuration_set exceeded max retries");
-          return ATLK_OK;
-        }
-        if (rc == ATLK_E_INVALID_STATE) {
-          usleep(1000000);
-        }
-      }
-    } while(atlk_error(rc));
-  }
-
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////// handle ddm - end   //////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-  return ATLK_OK;
+  return (int)ATLK_OK;
 }
 
 
@@ -515,16 +190,19 @@ cli_service_register(struct cli_def *cli, const char *command, char *argv[], int
   /* get user context */
   // user_context *myctx = (user_context *) cli_get_context(cli);
 
-  atlk_rc_t rc = ATLK_OK;
+  //atlk_rc_t rc = ATLK_OK;
 
   (void) command;
   (void) argc;
-  
+  int service_type = 0;
   IS_HELP_ARG("register to remote service -service_name -service_type -device_name");
   char  service_name[256] = "", device_name[256] = SECTON_DEVICE_NAME;
   GET_STRING("-service_name", service_name, 0, "Set service name ");
-  GET_INT("-service_type", dsm_service.service_type, 2, "Set service type [DSM_SERVICE_TYPE_V2X = 0, DSM_SERVICE_TYPE_ECC, DSM_SERVICE_TYPE_HSM, DSM_SERVICE_TYPE_WDM, DSM_SERVICE_TYPE_DEV]");
+  GET_INT("-service_type", service_type, 2, "Set service type [DSM_SERVICE_TYPE_V2X = 0, DSM_SERVICE_TYPE_ECC, DSM_SERVICE_TYPE_HSM, DSM_SERVICE_TYPE_WDM, DSM_SERVICE_TYPE_DEV]");
   GET_STRING("-device_name", device_name, 4, "Set device name ");
+  printf("%d",service_type);
+#if 0
+  dsm_service.service_type = service_type;
 
   dsm_service.service_name = (char *)&(service_name[0]);
   dsm_service.device_name = (char *)&(device_name[0]);
@@ -548,8 +226,9 @@ cli_service_register(struct cli_def *cli, const char *command, char *argv[], int
    }
 
   cli_print ( cli,"Device and service are registered");
+#endif
 
-  return ATLK_OK;
+  return (int)ATLK_OK;
 }
 
 
