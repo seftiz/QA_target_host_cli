@@ -169,7 +169,7 @@ int cli_v2x_link_print_cntrs( struct cli_def *cli, const char *command, char *ar
   (void) argc;
 
 	cli_print(cli, "TX : module = %u, session = %u", m_link_tx_packets, myctx->cntrs.link_tx_packets ); 
-	cli_print(cli, "RX : module = %u, session = %u", m_link_rx_packets, myctx->cntrs.link_rx_packets ); 
+	cli_print(cli, " RX : module = %u, session = %u", m_link_rx_packets, myctx->cntrs.link_rx_packets );
 
 	return ATLK_OK;
 }
@@ -725,7 +725,7 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
   i = 0;
   cli_print( cli, "Note : System will wait for %d frames or timeout %d", (int) frames, (int) timeout );
   
-	myctx->cntrs.link_rx_packets = 0;
+  myctx->cntrs.link_rx_packets = 0;
 	
   gettimeofday (&session_start, NULL);
 
@@ -828,8 +828,8 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
       goto error;
     }
 
-  	myctx->cntrs.link_rx_packets ++;
-		m_link_rx_packets ++;
+  	myctx->cntrs.link_rx_packets++;
+	m_link_rx_packets++;
 
 
 	if ( print_frms ) { 
@@ -846,18 +846,21 @@ int cli_v2x_link_rx( struct cli_def *cli, const char *command, char *argv[], int
 			
 			*(buf_ptr + 1) = '\0';
 			
-			cli_print( cli,   " Frame: %d, SA : %02x:%02x:%02x:%02x:%02x:%02x, DA : %02x:%02x:%02x:%02x:%02x:%02x\r\n RxData %s\r\n" /*Power : %.2f\r\n"*/,
+			cli_print(cli, "Frame: %d , TS (ms): %"PRIu64" , ch_num: %d , power_dbm8: %d \r\nRxData: %s \r\nrxOK\r\n",
 				 (int) ++i,
-				 /* SA */
+				 /*current.tv_sec * 1000.0*/link_sk_rx.receive_time_us,
+				 link_sk_rx.channel_id.channel_num,
+				 /* SA
 				 link_sk_rx.source_address.octets[0], link_sk_rx.source_address.octets[1],
 				 link_sk_rx.source_address.octets[2], link_sk_rx.source_address.octets[3],
 				 link_sk_rx.source_address.octets[4], link_sk_rx.source_address.octets[5],
-				 /* DA */
+
 				 link_sk_rx.dest_address.octets[0], link_sk_rx.dest_address.octets[1],
 				 link_sk_rx.dest_address.octets[2], link_sk_rx.dest_address.octets[3],
 				 link_sk_rx.dest_address.octets[4], link_sk_rx.dest_address.octets[5],
-				 buf_str/*,
-				 link_sk_rx.power_dbm8 == V2X_POWER_DBM8_NA ? NAN : (double)link_sk_rx.power_dbm8 / 8.0 */);
+				 */
+				 link_sk_rx.power_dbm8,
+				 buf_str);
 				 
 			free(buf_str);
 			
